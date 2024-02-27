@@ -1,3 +1,6 @@
 inspiracion/
 python_venv/
 network_scan_results.json
+logs/arp_scan.log
+logs/arp_spoof.log
+logs/dhcp_sniff.log

