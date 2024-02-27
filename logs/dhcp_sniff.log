@@ -1,0 +1,15 @@
+2024-01-31 13:25:21,320 - INFO - hostname: Nokia-Ladrillo
+2024-01-31 13:25:21,320 - INFO - client_ip_pkt: 0.0.0.0
+2024-01-31 13:25:21,321 - INFO - client_ip: 10.0.0.141. Current time: 2024-01-31 13:25:21
+2024-01-31 13:25:21,321 - INFO - Adding new device according to DHCP requests: 10.0.0.141
+2024-01-31 13:25:21,725 - INFO - Updated JSON file with DHCP information for 10.0.0.141
+2024-01-31 13:25:41,705 - INFO - hostname: DESKTOP-RIPBP9I
+2024-01-31 13:25:41,705 - INFO - client_ip_pkt: 0.0.0.0
+2024-01-31 13:25:41,705 - INFO - client_ip: 10.0.0.123. Current time: 2024-01-31 13:25:41
+2024-01-31 13:25:41,706 - INFO - Updating device according to DHCP requests: 10.0.0.123
+2024-01-31 13:25:42,070 - INFO - Updated JSON file with DHCP information for 10.0.0.123
+2024-01-31 13:26:09,053 - INFO - hostname: Nokia-Ladrillo
+2024-01-31 13:26:09,053 - INFO - client_ip_pkt: 0.0.0.0
+2024-01-31 13:26:09,054 - INFO - client_ip: 10.0.0.141. Current time: 2024-01-31 13:26:09
+2024-01-31 13:26:09,054 - INFO - Updating device according to DHCP requests: 10.0.0.141
+2024-01-31 13:26:09,431 - INFO - Updated JSON file with DHCP information for 10.0.0.141
