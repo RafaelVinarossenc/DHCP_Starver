@@ -18,10 +18,12 @@ from datetime import datetime
 #from pyroute2.netlink.exceptions import NetlinkError
 import sys
 
+#### CONFIG #### -------------------------------------------------------------------
+iface = "eth0"  # Network interface to spoof
+delay_between_dhcp_discovers = 0.1  # seconds
+delay_between_arp_scans = 60  # seconds
 
-# Interface to spoof
-iface = None
-
+#### GLOBAL VARIABLES #### ---------------------------------------------------------
 # Dict of all fake hosts k:MAC, v:fake_host
 fake_host_dict = dict()
 
