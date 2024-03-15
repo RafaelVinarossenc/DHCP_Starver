@@ -2,7 +2,7 @@
 import scapy.all as scapy
 import nmap
 import time
-#import json
+import json
 import threading
 import sched
 import netifaces
@@ -11,6 +11,7 @@ from logging.handlers import TimedRotatingFileHandler
 #import gzip
 #import os
 #from datetime import datetime, timedelta # Intervalos de tiempo
+import requests
 import random
 import ipaddress
 from pyroute2 import IPRoute # Para el modo promiscuo
@@ -28,7 +29,10 @@ delay_between_arp_scans = 60  # seconds
 fake_host_dict = dict()
 
 # Dict of all existing hosts (still managed by original DHCP Server)
-existing_host_dict = dict()
+#existing_host_dict = dict()
+
+# Dict of found devices existing on the network
+found_devices = {}
 
 # DHCP Server's IP and MAC address
 dhcp_server_ip = ""
@@ -70,7 +74,7 @@ class existing_host:
 file_semaphore = threading.Semaphore()
 
 # Replace this with the path to your JSON file
-#json_file = "/home/pi/dhcp_starver/network_scan_results.json"
+json_file = "/home/pi/dhcp_starver/network_scan_results.json"
 
 # Set up logging with rotation policy
 log_file = "/home/pi/dhcp_starver/logs/dhcp_starver.log"
@@ -527,6 +531,10 @@ def perform_arp_scan(network):
     """
     write_to_log(f"Starting ARP Request scan...")
     ip_mac_data = arp_scan(network)
+    # Updating json file
+    global found_devices
+    found_devices = update_device_info(ip_mac_data, found_devices)
+    save_results_to_json(found_devices, json_file)
     # Getting Pi-hole DHCP Server's IP lease list
     spoofed_hosts = get_dhcp_leases()
     for ip, mac in ip_mac_data:
@@ -573,7 +581,49 @@ def get_dhcp_leases():
                 dhcp_leases[mac_address] = {'ip_address': ip_address}
     return dhcp_leases
 
-#def is_this_guy_spoofed():
+
+def save_results_to_json(results, file_path):
+    """
+    Saves found devices to json file
+    """
+    with file_semaphore:
+        with open(file_path, 'w') as json_file:
+            json.dump(results, json_file, indent=2)
+
+
+def get_vendor_by_mac(mac_address):
+    """
+    Gets device vendor by checking MAC address on macvendors.com 
+    """
+    api_url = f'https://api.macvendors.com/{mac_address}'
+    try:
+        response = requests.get(api_url)
+        if response.status_code == 200:
+            return response.text.strip()
+    except requests.exceptions.RequestException:
+        pass
+    return 'Unknown Vendor'
+
+
+def update_device_info(ip_mac_data, previous_results):
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    for ip, mac in ip_mac_data:
+        # Check if its router
+        is_router = mac.lower() == dhcp_server_mac.lower()
+        # If the device was discovered in a previous scan
+        if ip in previous_results:
+            # If the IP and MAC of the previous data are different, we perform a complete update
+            if previous_results[ip]['mac'].lower() != mac.lower():
+                #write_to_log(f"Updating complete info. Current time: {current_time}")
+                previous_results[ip].update({'mac': mac.lower(), 'ip': ip, 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'})
+            else:
+                # The device was already in the file and MAC and IP concurs
+                previous_results[ip].update({'last_seen': current_time})
+        else:
+            # Add new device entry
+            previous_results[ip] = {'mac': mac.lower(), 'ip': ip, 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'}
+
+    return previous_results
 
 
 def main():
