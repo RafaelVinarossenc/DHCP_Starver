@@ -1,16 +1,32 @@
 {
-  "192.168.2.1": {
-    "mac": "64:d1:54:b1:f7:a8",
-    "vendor": "Routerboard.com",
-    "last_seen": "2024-03-15 22:57:22",
+  "10.0.0.250": {
+    "mac": "48:8d:36:51:5b:3f",
+    "vendor": "Arcadyan Corporation",
+    "last_seen": "2024-03-15 23:34:15",
     "is_router": true,
     "hostname": "-",
     "is_spoofed": false
   },
-  "192.168.2.250": {
-    "mac": "d8:3a:dd:80:f6:5d",
-    "vendor": "Raspberry Pi Trading Ltd",
-    "last_seen": "2024-03-15 22:57:22",
+  "10.0.0.27": {
+    "mac": "a0:88:69:5e:0c:d1",
+    "vendor": "Intel Corporate",
+    "last_seen": "2024-03-15 23:34:15",
+    "is_router": false,
+    "hostname": "-",
+    "is_spoofed": true
+  },
+  "10.0.0.46": {
+    "mac": "02:38:3b:bc:a7:30",
+    "vendor": "Unknown Vendor",
+    "last_seen": "2024-03-15 23:33:15",
+    "is_router": false,
+    "hostname": "-",
+    "is_spoofed": true
+  },
+  "10.0.0.88": {
+    "mac": "bc:ce:25:eb:79:5d",
+    "vendor": "Nintendo Co.,Ltd",
+    "last_seen": "2024-03-15 23:33:15",
     "is_router": false,
     "hostname": "-",
     "is_spoofed": false
