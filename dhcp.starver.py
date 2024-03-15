@@ -531,12 +531,13 @@ def perform_arp_scan(network):
     """
     write_to_log(f"Starting ARP Request scan...")
     ip_mac_data = arp_scan(network)
-    # Updating json file
-    global found_devices
-    found_devices = update_device_info(ip_mac_data, found_devices)
-    save_results_to_json(found_devices, json_file)
     # Getting Pi-hole DHCP Server's IP lease list
     spoofed_hosts = get_dhcp_leases()
+    # Updating json file
+    global found_devices
+    found_devices = update_device_info(ip_mac_data, found_devices, spoofed_hosts)
+    save_results_to_json(found_devices, json_file)
+    
     for ip, mac in ip_mac_data:
         # Checking if discovered host is not DHCP server or not already spoofed
         if ip != dhcp_server_ip and mac.lower() not in spoofed_hosts.keys():
@@ -574,11 +575,11 @@ def get_dhcp_leases():
                 #timestamp = parts[0]
                 mac_address = parts[1]
                 ip_address = parts[2]
-                #hostname = parts[3]
+                hostname = parts[3]
                 #if len(parts) > 4:
                 #    hostname += " " + " ".join(parts[4:])
                 #dhcp_leases[mac_address] = {'timestamp': timestamp, 'ip_address': ip_address, 'hostname': hostname}
-                dhcp_leases[mac_address] = {'ip_address': ip_address}
+                dhcp_leases[mac_address] = {'ip_address': ip_address, 'hostname': hostname}
     return dhcp_leases
 
 
@@ -605,23 +606,25 @@ def get_vendor_by_mac(mac_address):
     return 'Unknown Vendor'
 
 
-def update_device_info(ip_mac_data, previous_results):
+def update_device_info(ip_mac_data, previous_results, spoofed_hosts):
     current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     for ip, mac in ip_mac_data:
         # Check if its router
         is_router = mac.lower() == dhcp_server_mac.lower()
+        # Check if the device is spoofed. Comparing IP-MAC assigment with Pihole's DHCP server leases
+        is_spoofed = mac.lower() in spoofed_hosts and ip == spoofed_hosts[mac.lower()]    
         # If the device was discovered in a previous scan
         if ip in previous_results:
             # If the IP and MAC of the previous data are different, we perform a complete update
             if previous_results[ip]['mac'].lower() != mac.lower():
-                #write_to_log(f"Updating complete info. Current time: {current_time}")
-                previous_results[ip].update({'mac': mac.lower(), 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'})
+                previous_results[ip].update({'mac': mac.lower(), 'vendor': get_vendor_by_mac(mac), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-', 'is_spoofed': is_spoofed})
             else:
                 # The device was already in the file and MAC and IP concurs
                 previous_results[ip].update({'last_seen': current_time})
+                previous_results[ip].update({'is_spoofed': is_spoofed})
         else:
             # Add new device entry
-            previous_results[ip] = {'mac': mac.lower(), 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'}
+            previous_results[ip] = {'mac': mac.lower(), 'vendor': get_vendor_by_mac(mac), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-', 'is_spoofed': is_spoofed}
 
     return previous_results
 

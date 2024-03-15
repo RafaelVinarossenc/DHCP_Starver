@@ -1,18 +1,18 @@
 {
   "192.168.2.1": {
     "mac": "64:d1:54:b1:f7:a8",
-    "ip": "192.168.2.1",
     "vendor": "Routerboard.com",
-    "last_seen": "2024-03-15 10:16:47",
+    "last_seen": "2024-03-15 22:57:22",
     "is_router": true,
-    "hostname": "-"
+    "hostname": "-",
+    "is_spoofed": false
   },
   "192.168.2.250": {
     "mac": "d8:3a:dd:80:f6:5d",
-    "ip": "192.168.2.250",
     "vendor": "Raspberry Pi Trading Ltd",
-    "last_seen": "2024-03-15 10:16:47",
+    "last_seen": "2024-03-15 22:57:22",
     "is_router": false,
-    "hostname": "-"
+    "hostname": "-",
+    "is_spoofed": false
   }
 }
