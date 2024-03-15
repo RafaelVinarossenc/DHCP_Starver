@@ -615,13 +615,13 @@ def update_device_info(ip_mac_data, previous_results):
             # If the IP and MAC of the previous data are different, we perform a complete update
             if previous_results[ip]['mac'].lower() != mac.lower():
                 #write_to_log(f"Updating complete info. Current time: {current_time}")
-                previous_results[ip].update({'mac': mac.lower(), 'ip': ip, 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'})
+                previous_results[ip].update({'mac': mac.lower(), 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'})
             else:
                 # The device was already in the file and MAC and IP concurs
                 previous_results[ip].update({'last_seen': current_time})
         else:
             # Add new device entry
-            previous_results[ip] = {'mac': mac.lower(), 'ip': ip, 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'}
+            previous_results[ip] = {'mac': mac.lower(), 'vendor': get_vendor_by_mac(mac.lower()), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-'}
 
     return previous_results
 
