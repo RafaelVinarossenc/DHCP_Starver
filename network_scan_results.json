@@ -1,32 +1,24 @@
 {
-  "10.0.0.250": {
-    "mac": "48:8d:36:51:5b:3f",
-    "vendor": "Arcadyan Corporation",
-    "last_seen": "2024-03-15 23:34:15",
+  "192.168.1.1": {
+    "mac": "30:b5:c2:51:01:13",
+    "vendor": "TP-LINK TECHNOLOGIES CO.,LTD.",
+    "last_seen": "2024-03-29 10:33:40",
     "is_router": true,
     "hostname": "-",
     "is_spoofed": false
   },
-  "10.0.0.27": {
-    "mac": "a0:88:69:5e:0c:d1",
-    "vendor": "Intel Corporate",
-    "last_seen": "2024-03-15 23:34:15",
-    "is_router": false,
-    "hostname": "-",
-    "is_spoofed": true
-  },
-  "10.0.0.46": {
-    "mac": "02:38:3b:bc:a7:30",
+  "192.168.1.101": {
+    "mac": "e6:b4:08:fc:e5:f4",
     "vendor": "Unknown Vendor",
-    "last_seen": "2024-03-15 23:33:15",
+    "last_seen": "2024-03-29 10:32:43",
     "is_router": false,
     "hostname": "-",
-    "is_spoofed": true
+    "is_spoofed": false
   },
-  "10.0.0.88": {
-    "mac": "bc:ce:25:eb:79:5d",
-    "vendor": "Nintendo Co.,Ltd",
-    "last_seen": "2024-03-15 23:33:15",
+  "192.168.1.104": {
+    "mac": "98:54:1b:c6:05:e8",
+    "vendor": "Intel Corporate",
+    "last_seen": "2024-03-29 10:32:43",
     "is_router": false,
     "hostname": "-",
     "is_spoofed": false
