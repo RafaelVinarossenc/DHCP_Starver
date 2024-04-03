@@ -1,5 +1,3 @@
 inspiracion/
 python_venv/
-logs/arp_scan.log
-logs/arp_spoof.log
-logs/dhcp_sniff.log
+logs/
