@@ -263,7 +263,8 @@ def send_release(host_mac, ip_address):
                          dst=dhcp_server_ip)
     udp_header = scapy.UDP(sport=68, 
                            dport=67)
-    bootp_field = scapy.BOOTP(chaddr=mac_address, 
+    bootp_field = scapy.BOOTP(chaddr=mac_address,
+                              ciaddr=ip_address,
                               xid=trans_id,
                               flags=0)
     dhcp_field = scapy.DHCP(options=[("message-type", "release"),
