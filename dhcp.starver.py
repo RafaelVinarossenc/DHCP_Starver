@@ -2,16 +2,16 @@
 import scapy.all as scapy
 import nmap
 import time
-import json
+#import json
 import threading
-import sched
+#import sched
 import netifaces
 import logging
 from logging.handlers import TimedRotatingFileHandler
 #import gzip
 #import os
 #from datetime import datetime, timedelta # Intervalos de tiempo
-import requests
+#import requests
 import random
 import ipaddress
 from pyroute2 import IPRoute # Para el modo promiscuo
@@ -25,7 +25,7 @@ delay_between_dhcp_packets = 0.5 # seconds
 delay_between_arp_scans = 120  # seconds
 delay_between_checks_if_ip_renewal_is_necessary = 60 # seconds
 
-finish_program = False
+finish_program = False # Used to stop loops in async threads
 
 #### GLOBAL VARIABLES #### ---------------------------------------------------------
 # Dict of all fake hosts k:MAC, v:fake_host
@@ -59,7 +59,7 @@ class fake_host:
         self.hostname = "elvispresley"
         self.lease_time = None  # IP Address Lease Time offered by DHCP Server
         self.acquisition_time = None  # Time when IP Address was obtained/renewed
-        self.ip_adquired = False  # Sets if this host has adquired successfully the IP Address
+        self.ip_acquired = False  # Sets if this host has adquired successfully the IP Address
     #def __str__(self):
     #    return f"IP: {self.ip_address}, MAC: {self.mac_address}, hostname: {self.hostname}"
 
@@ -364,7 +364,7 @@ def handle_dhcp_packet(packet):
         fake_host_dict[host_mac].ip_address = host_ip
         fake_host_dict[host_mac].lease_time = dhcp_opts['lease_time']
         fake_host_dict[host_mac].acquisition_time = datetime.now()
-        fake_host_dict[host_mac].ip_adquired = True
+        fake_host_dict[host_mac].ip_acquired = True
         # Updating DHCP server's params
         #global dhcp_server_ip
         dhcp_server_ip = dhcp_opts["server_id"] 
@@ -461,7 +461,7 @@ def renew_hosts_ip_leases():
     """
     #write_to_log(f"Trying IP Lease renewal...")
     for host in fake_host_dict.values():
-        if is_ip_renew_needed(host.lease_time, host.acquisition_time) and host.ip_adquired == True:
+        if is_ip_renew_needed(host.lease_time, host.acquisition_time) and host.ip_acquired == True:
             # Resetting Transaction ID
             host.transaction_id = random.getrandbits(32)
             # Unicast DHCP Request to renew IP address lease
@@ -519,18 +519,22 @@ def release_all_ips():
     Sends a DHCP Release for every fake host with an IP address linked
     """
     for host in fake_host_dict.values():
-        if host.ip_adquired:
+        if host.ip_acquired:
             send_release(host.mac_address, host.ip_address)
+            time.sleep(0.25)
     write_to_log(f"All IP addresses have been released!")
     
 
-def perform_arp_scan(network):
+def perform_arp_scan(network_ip_addresses):
+#def perform_arp_scan(network):
     """
     Perform an ARP scan
     """
     while not finish_program:
         write_to_log(f"Starting ARP Request scan. Next scan in {delay_between_arp_scans} seconds.")
-        ip_mac_data = arp_scan(network)
+        target_ips = get_unspoofed_ips(network_ip_addresses)
+        ip_mac_data = arp_scan(target_ips)
+        # ip_mac_data = arp_scan(network)
         # Getting Pi-hole DHCP Server's IP lease list
         spoofed_hosts = get_dhcp_leases()
         # Updating json file
@@ -551,6 +555,29 @@ def perform_arp_scan(network):
         #save_results_to_json(found_devices, json_file)
         time.sleep(delay_between_arp_scans)
 
+
+def get_unspoofed_ips(network_ip_addresses):
+    """
+    Compares avalaible ip addresses with spoofed ips to return a list with non spoofed IP addresses
+    """
+    try:
+
+        fake_hosts_ips = []
+
+        for _ , fake_host in fake_host_dict.items():
+            if fake_host.ip_acquired:
+                fake_hosts_ips.append(fake_host.ip_address)
+
+        all_ips = set(network_ip_addresses)
+        spoofed_ips = set(fake_hosts_ips)
+        
+        # Obtain the IP addresses that not exist in spoofed_ips
+        non_spoofed_ips = list(all_ips - spoofed_ips)
+
+        return non_spoofed_ips
+    except:
+        # If an error occurs, return the whole address list
+        return network_ip_addresses
 
 def release_and_catch(host_mac, host_ip):
     """
@@ -586,8 +613,9 @@ def send_gratuitous_arp(host_mac, host_ip):
         scapy.sendp(arp_request, verbose=False, iface=iface)
     write_to_log(f"Sending Gratuitous ARP announcing {host_mac} - {host_ip}")
 
-
+'''
 def arp_scan(network):
+    
     """
     Performs a nmap ARP request scan to find existing hosts on the network
     """
@@ -600,7 +628,44 @@ def arp_scan(network):
     except Exception as e:
         write_to_log(f"Error during ARP scan: {e}")
         return None
+'''
+def arp_scan(target_ips):
+    """
+    Performs a nmap ARP request scan to find existing hosts on the network on target ip addresses
+    """
+    # ARP Request packet, one for every unspoofed ip address
+    arp_requests = [scapy.Ether(dst="ff:ff:ff:ff:ff:ff") / scapy.ARP(pdst=ip) for ip in target_ips]
 
+    result, _ = scapy.srp(arp_requests, timeout=5, verbose=False)
+
+    # List to save responding hosts' (IP, MAC) tuples
+    responsive_ips = []
+
+    # For every response, checks if it's an ARP response and saves the responding host params
+    for _ , received in result:
+        if received.haslayer(scapy.ARP):
+            ip_address = received.psrc
+            mac_address = received.hwsrc
+            responsive_ips.append((ip_address, mac_address.lower()))
+    return responsive_ips
+    """
+    nm = nmap.PortScanner()
+    try:
+        '''
+        for ip in target_ips:
+            nm.scan(hosts=ip, arguments='-sP -PR')
+            # For every found host creates a duple IP Address - MAC Address, adds it to a dictionary
+            ip_mac_data = [(x, nm[x]['addresses']['mac'].lower()) for x in nm.all_hosts() if 'mac' in nm[x]['addresses']]
+        return ip_mac_data
+        '''
+        nm.scan(hosts=target_ips, arguments='-sP -PR')
+        # For every found host creates a duple IP Address - MAC Address, adds it to a dictionary
+        ip_mac_data = [(x, nm[x]['addresses']['mac'].lower()) for x in nm.all_hosts() if 'mac' in nm[x]['addresses']]
+        return ip_mac_data
+    except Exception as e:
+        write_to_log(f"Error during ARP scan: {e}")
+        return None
+    """
 
 def get_dhcp_leases():
     """
@@ -703,7 +768,8 @@ def main():
 
     try:
         # Starting ARP scan thread
-        arp_scan_thread = threading.Thread(target=perform_arp_scan, args=(our_network,)).start()
+        #arp_scan_thread = threading.Thread(target=perform_arp_scan, args=(our_network,)).start()
+        arp_scan_thread = threading.Thread(target=perform_arp_scan, args=(avalaible_hosts,)).start()
         # Starting IP Lease Renewal thread
         ip_lease_renewal_thread = threading.Thread(target=ip_lease_renewal).start()
         # Infinite loop to maintain threads running
