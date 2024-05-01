@@ -1,6 +1,6 @@
 #### IMPORTS #### -------------------------------------------------------------------
 import scapy.all as scapy
-import nmap
+#import nmap
 import time
 #import json
 import threading
