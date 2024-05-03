@@ -21,7 +21,7 @@ import sys
 
 #### CONFIG #### -------------------------------------------------------------------
 iface = "eth0"  # Network interface to spoof
-delay_between_dhcp_packets = 0.5 # seconds
+delay_between_dhcp_packets = 1 # seconds
 delay_between_arp_scans = 120  # seconds
 delay_between_checks_if_ip_renewal_is_necessary = 60 # seconds
 
@@ -851,7 +851,7 @@ def main():
 
     # Pool exhaustion: getting all avalaible IP from DHCP server's pool
     pool_exhaustion_with_request(avalaible_hosts, delay_between_dhcp_packets)
-    time_to_wait_to_receive_all_ack = 30  # seconds
+    time_to_wait_to_receive_all_ack = 60  # seconds
     # If no ACK is received, DHCP server's IP address can't be catched. Trying more reliable (and slow) exhaustion with DORA handshake
     if dhcp_server_ip == "":
         write_to_log(f"Pool exhaustion with DHCP Request failed. Trying exhaustion with DHCP Discover")

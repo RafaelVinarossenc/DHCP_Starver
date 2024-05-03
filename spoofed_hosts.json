@@ -1,0 +1,434 @@
+{
+    "34:05:75:f9:fa:eb": {
+        "ip_address": "192.168.1.76",
+        "mac_address": "34:05:75:f9:fa:eb",
+        "transaction_id": 1177432548,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:42",
+        "ip_acquired": true
+    },
+    "34:b9:ce:74:6c:2f": {
+        "ip_address": "192.168.1.77",
+        "mac_address": "34:b9:ce:74:6c:2f",
+        "transaction_id": 3569805353,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:42",
+        "ip_acquired": true
+    },
+    "34:a8:39:e2:5f:90": {
+        "ip_address": "192.168.1.78",
+        "mac_address": "34:a8:39:e2:5f:90",
+        "transaction_id": 2014019660,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:43",
+        "ip_acquired": true
+    },
+    "34:35:20:47:2c:20": {
+        "ip_address": "192.168.1.79",
+        "mac_address": "34:35:20:47:2c:20",
+        "transaction_id": 277116002,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:43",
+        "ip_acquired": true
+    },
+    "34:b5:45:92:21:f7": {
+        "ip_address": "192.168.1.80",
+        "mac_address": "34:b5:45:92:21:f7",
+        "transaction_id": 232168751,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:44",
+        "ip_acquired": true
+    },
+    "34:bb:7c:78:af:c9": {
+        "ip_address": "192.168.1.81",
+        "mac_address": "34:bb:7c:78:af:c9",
+        "transaction_id": 2383222577,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:44",
+        "ip_acquired": true
+    },
+    "34:00:ee:d6:18:0f": {
+        "ip_address": "192.168.1.82",
+        "mac_address": "34:00:ee:d6:18:0f",
+        "transaction_id": 3416866381,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:45",
+        "ip_acquired": true
+    },
+    "34:1b:63:59:0b:08": {
+        "ip_address": "192.168.1.83",
+        "mac_address": "34:1b:63:59:0b:08",
+        "transaction_id": 1689375073,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:45",
+        "ip_acquired": true
+    },
+    "34:7b:b8:74:db:16": {
+        "ip_address": "192.168.1.84",
+        "mac_address": "34:7b:b8:74:db:16",
+        "transaction_id": 2018036275,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:46",
+        "ip_acquired": true
+    },
+    "34:45:8e:58:34:12": {
+        "ip_address": "192.168.1.85",
+        "mac_address": "34:45:8e:58:34:12",
+        "transaction_id": 3091928490,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:46",
+        "ip_acquired": true
+    },
+    "34:65:be:12:d7:4c": {
+        "ip_address": "192.168.1.86",
+        "mac_address": "34:65:be:12:d7:4c",
+        "transaction_id": 496571138,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:47",
+        "ip_acquired": true
+    },
+    "34:28:b9:24:06:64": {
+        "ip_address": "192.168.1.87",
+        "mac_address": "34:28:b9:24:06:64",
+        "transaction_id": 270807332,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:47",
+        "ip_acquired": true
+    },
+    "34:1c:1f:08:9f:1a": {
+        "ip_address": "192.168.1.88",
+        "mac_address": "34:1c:1f:08:9f:1a",
+        "transaction_id": 2808073380,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:48",
+        "ip_acquired": true
+    },
+    "34:84:ae:21:ad:63": {
+        "ip_address": "192.168.1.89",
+        "mac_address": "34:84:ae:21:ad:63",
+        "transaction_id": 424965660,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:49",
+        "ip_acquired": true
+    },
+    "34:13:c1:f7:9a:78": {
+        "ip_address": "192.168.1.90",
+        "mac_address": "34:13:c1:f7:9a:78",
+        "transaction_id": 297086059,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:49",
+        "ip_acquired": true
+    },
+    "34:0a:12:e6:8d:a0": {
+        "ip_address": "192.168.1.91",
+        "mac_address": "34:0a:12:e6:8d:a0",
+        "transaction_id": 1876062713,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:50",
+        "ip_acquired": true
+    },
+    "34:83:e5:fe:40:f4": {
+        "ip_address": "192.168.1.92",
+        "mac_address": "34:83:e5:fe:40:f4",
+        "transaction_id": 441616771,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:50",
+        "ip_acquired": true
+    },
+    "34:76:94:6d:e2:7a": {
+        "ip_address": "192.168.1.93",
+        "mac_address": "34:76:94:6d:e2:7a",
+        "transaction_id": 2403415741,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:51",
+        "ip_acquired": true
+    },
+    "34:a5:67:40:bc:0f": {
+        "ip_address": "192.168.1.94",
+        "mac_address": "34:a5:67:40:bc:0f",
+        "transaction_id": 2093246558,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:51",
+        "ip_acquired": true
+    },
+    "34:cd:a8:48:ac:b6": {
+        "ip_address": "192.168.1.95",
+        "mac_address": "34:cd:a8:48:ac:b6",
+        "transaction_id": 2297899617,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:52",
+        "ip_acquired": true
+    },
+    "34:6e:b3:75:31:68": {
+        "ip_address": "192.168.1.96",
+        "mac_address": "34:6e:b3:75:31:68",
+        "transaction_id": 1275080804,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:52",
+        "ip_acquired": true
+    },
+    "34:03:9d:0a:bd:52": {
+        "ip_address": "192.168.1.97",
+        "mac_address": "34:03:9d:0a:bd:52",
+        "transaction_id": 1824390377,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:53",
+        "ip_acquired": true
+    },
+    "34:a1:1b:ae:91:9e": {
+        "ip_address": "192.168.1.98",
+        "mac_address": "34:a1:1b:ae:91:9e",
+        "transaction_id": 1548154131,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:53",
+        "ip_acquired": true
+    },
+    "34:39:a3:a9:80:b5": {
+        "ip_address": "192.168.1.99",
+        "mac_address": "34:39:a3:a9:80:b5",
+        "transaction_id": 283174493,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:28:54",
+        "ip_acquired": true
+    },
+    "34:2d:d8:7a:ae:37": {
+        "ip_address": "192.168.1.101",
+        "mac_address": "34:2d:d8:7a:ae:37",
+        "transaction_id": 2617228713,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:10",
+        "ip_acquired": true
+    },
+    "34:57:f2:aa:a2:ad": {
+        "ip_address": "192.168.1.102",
+        "mac_address": "34:57:f2:aa:a2:ad",
+        "transaction_id": 1762693996,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:10",
+        "ip_acquired": true
+    },
+    "34:90:17:f1:00:67": {
+        "ip_address": "192.168.1.103",
+        "mac_address": "34:90:17:f1:00:67",
+        "transaction_id": 3774693224,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:11",
+        "ip_acquired": true
+    },
+    "34:bd:04:81:38:23": {
+        "ip_address": "192.168.1.104",
+        "mac_address": "34:bd:04:81:38:23",
+        "transaction_id": 1844976497,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:11",
+        "ip_acquired": true
+    },
+    "34:1e:8a:e7:d9:93": {
+        "ip_address": "192.168.1.105",
+        "mac_address": "34:1e:8a:e7:d9:93",
+        "transaction_id": 3377417776,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:12",
+        "ip_acquired": true
+    },
+    "34:78:fb:3c:8a:ee": {
+        "ip_address": "192.168.1.106",
+        "mac_address": "34:78:fb:3c:8a:ee",
+        "transaction_id": 2455050113,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:12",
+        "ip_acquired": true
+    },
+    "34:6a:c9:7e:45:30": {
+        "ip_address": "192.168.1.107",
+        "mac_address": "34:6a:c9:7e:45:30",
+        "transaction_id": 1946584165,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:13",
+        "ip_acquired": true
+    },
+    "34:95:ee:3a:ce:ea": {
+        "ip_address": "192.168.1.108",
+        "mac_address": "34:95:ee:3a:ce:ea",
+        "transaction_id": 3884309965,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:13",
+        "ip_acquired": true
+    },
+    "34:7d:77:0b:ef:a2": {
+        "ip_address": "192.168.1.109",
+        "mac_address": "34:7d:77:0b:ef:a2",
+        "transaction_id": 4217295993,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:14",
+        "ip_acquired": true
+    },
+    "34:bb:b0:ea:9f:96": {
+        "ip_address": "192.168.1.110",
+        "mac_address": "34:bb:b0:ea:9f:96",
+        "transaction_id": 1938643654,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:14",
+        "ip_acquired": true
+    },
+    "34:84:da:f2:82:db": {
+        "ip_address": "192.168.1.111",
+        "mac_address": "34:84:da:f2:82:db",
+        "transaction_id": 3495200053,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:15",
+        "ip_acquired": true
+    },
+    "34:1a:4c:81:39:17": {
+        "ip_address": "192.168.1.112",
+        "mac_address": "34:1a:4c:81:39:17",
+        "transaction_id": 634463568,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:15",
+        "ip_acquired": true
+    },
+    "34:3a:d1:6e:04:48": {
+        "ip_address": "192.168.1.113",
+        "mac_address": "34:3a:d1:6e:04:48",
+        "transaction_id": 272862921,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:16",
+        "ip_acquired": true
+    },
+    "34:f7:af:64:21:34": {
+        "ip_address": "192.168.1.114",
+        "mac_address": "34:f7:af:64:21:34",
+        "transaction_id": 3721815664,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:17",
+        "ip_acquired": true
+    },
+    "34:7b:8b:0a:13:3a": {
+        "ip_address": "192.168.1.115",
+        "mac_address": "34:7b:8b:0a:13:3a",
+        "transaction_id": 1935076705,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:17",
+        "ip_acquired": true
+    },
+    "34:6e:1b:7b:e5:d0": {
+        "ip_address": "192.168.1.116",
+        "mac_address": "34:6e:1b:7b:e5:d0",
+        "transaction_id": 2713526577,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:18",
+        "ip_acquired": true
+    },
+    "34:93:6f:28:b7:d1": {
+        "ip_address": "192.168.1.117",
+        "mac_address": "34:93:6f:28:b7:d1",
+        "transaction_id": 226139650,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:18",
+        "ip_acquired": true
+    },
+    "34:8e:de:d8:2c:8c": {
+        "ip_address": "192.168.1.118",
+        "mac_address": "34:8e:de:d8:2c:8c",
+        "transaction_id": 2165241604,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:19",
+        "ip_acquired": true
+    },
+    "34:0f:48:10:6c:d2": {
+        "ip_address": "192.168.1.119",
+        "mac_address": "34:0f:48:10:6c:d2",
+        "transaction_id": 87344622,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:19",
+        "ip_acquired": true
+    },
+    "34:b7:0a:f1:39:54": {
+        "ip_address": "192.168.1.120",
+        "mac_address": "34:b7:0a:f1:39:54",
+        "transaction_id": 3258886916,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:20",
+        "ip_acquired": true
+    },
+    "34:21:39:29:ca:b9": {
+        "ip_address": "192.168.1.121",
+        "mac_address": "34:21:39:29:ca:b9",
+        "transaction_id": 294877944,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:20",
+        "ip_acquired": true
+    },
+    "34:3e:0a:23:22:91": {
+        "ip_address": "192.168.1.122",
+        "mac_address": "34:3e:0a:23:22:91",
+        "transaction_id": 2444523348,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:21",
+        "ip_acquired": true
+    },
+    "34:40:d8:23:3e:03": {
+        "ip_address": "192.168.1.123",
+        "mac_address": "34:40:d8:23:3e:03",
+        "transaction_id": 336755034,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:21",
+        "ip_acquired": true
+    },
+    "34:c2:e0:58:e1:12": {
+        "ip_address": "192.168.1.124",
+        "mac_address": "34:c2:e0:58:e1:12",
+        "transaction_id": 2254689869,
+        "hostname": "elvispresley",
+        "lease_time": 600,
+        "acquisition_time": "2024-05-03 23:29:22",
+        "ip_acquired": true
+    }
+}
