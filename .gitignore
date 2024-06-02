@@ -1,4 +1,5 @@
+__pycache__/
 inspiracion/
-python_venv/
 logs/
-test.py
+old_spoof/
+python_venv/
