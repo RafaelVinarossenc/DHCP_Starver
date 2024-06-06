@@ -21,11 +21,6 @@ def get_random_hostname():
     """
     Returns a random string like "DESKTOP-XXXXXXX"
     """
-    # Definir los caracteres permitidos (letras mayúsculas y dígitos)
     chars = string.ascii_uppercase + string.digits
-    
-    # Generar una cadena aleatoria de 7 caracteres
     random_string = ''.join(random.choice(chars) for _ in range(7))
-    
-    # Devolver el resultado con el prefijo "DESKTOP-"
     return "DESKTOP-" + random_string

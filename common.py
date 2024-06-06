@@ -39,7 +39,6 @@ class fake_host:
     @classmethod
     def from_dict(cls, data):
         instance = cls(mac_address=data["mac_address"], transaction_id=data["transaction_id"], ip_address=data["ip_address"])
-        #instance.ip_address = data["ip_address"]
         instance.hostname = data["hostname"]
         instance.lease_time = data["lease_time"]
         instance.acquisition_time = datetime.strptime(data["acquisition_time"], "%Y-%m-%d %H:%M:%S")
@@ -69,7 +68,7 @@ def get_network_params(iface_name):
         network_address = ipaddress.ip_network(f"{ip_address}/{network_mask}", strict=False)
         return ip_address, mac_address, network_mask, str(network_address)
     except (KeyError, IndexError):
-        return None, None, None
+        return None, None, None, None
 
 
 def get_hosts_from_network(ip_address, netmask):
@@ -134,3 +133,15 @@ def get_dhcp_options(packet):
         else:
             pass
     return dhcp_opts_dict
+
+
+def capture_dhcp_packets(packet_list, interface):
+    """
+    Capture DHCP packets and stores them in the `captured_packets` list
+    """
+    def packet_handler(pkt):
+        if pkt.haslayer(scapy.DHCP):
+            packet_list.append(pkt)
+
+    #scapy.sniff(iface=iface, filter="udp and dst port 68", prn=packet_handler, store=0)
+    scapy.sniff(iface=interface, filter="udp and (port 67 or port 68)", prn=packet_handler, store=0)
