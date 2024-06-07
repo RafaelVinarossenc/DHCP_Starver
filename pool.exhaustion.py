@@ -38,7 +38,7 @@ dhcp_server_mac = ""
 our_ip_address = ""
 our_mac_address = ""
 our_netmask = ""
-our_network = ""
+#our_network = ""
 
 
 # Define a semaphore for .log/.json file access without collision
@@ -67,65 +67,26 @@ def write_to_log(message):
         logger.info(message)
 
 
-def load_from_json(file_path):
-    """
-    Load json file contents to a dictionary
-    """
-
-    write_to_log(f"Loading results from {file_path}")
-
-    try:
-        with file_semaphore:
-                with open(file_path, 'r') as file:
-                    data = json.load(file)
-        # Create a dict with fake_host objects
-        file_dict = {}
-        for ip, host_data in data.items():
-            file_dict[ip] = fake_host.from_dict(host_data)
-
-    # Return an empty dict if something goes wrong
-    except FileNotFoundError:
-        write_to_log(f"File not found: {json_file}")
-        file_dict = {}
-    except json.JSONDecodeError as e:
-        write_to_log(f"Error decoding JSON file: {e}")
-        file_dict = {}
-    except Exception as e:
-        write_to_log(f"Unknown error during file read: {e}")
-        file_dict = {}
-
-    return file_dict
-
-
-def save_to_json(results, file_path):
-    """
-    Save a fake_host dictionary to a json file
-    """
-    # If results is an empty dictionary, flush json file
-    if not results:
-        with open(file_path, 'w') as file:
-            pass  
-
-    serializable_dict = {ip: host.to_dict() for ip, host in results.items()}
-    with file_semaphore:
-        with open(file_path, 'w') as file:
-            json.dump(serializable_dict, file, indent=4)
-    #write_to_log(f"Results saved in {file_path}")
-
-
 def update_json_file(updated_ip_dict, file_path):
         """
-        Update json file with new information. Load + Update + Save
+        Update json file with new information.
+        Load specified file into a dictionary, adds new entries and save it to JSON file.
         """
+        try:
+            # Load previous results from JSON file
+            dict_on_file = load_from_json(file_path, file_semaphore)
 
-        # Load previous results from json file
-        dict_on_file = load_from_json(file_path)
-
-        # Update previous results with new hosts' information
-        for ip, host in updated_ip_dict.items():
-            dict_on_file[ip] = host
-
-        save_to_json(dict_on_file, file_path)
+            # Update previous results with new hosts' information
+            for ip, host in updated_ip_dict.items():
+                dict_on_file[ip] = host
+            # Save updated results back to the JSON file
+            save_to_json(dict_on_file, file_path, file_semaphore)
+        except FileNotFoundError as e:
+            write_to_log(str(e))
+        except json.JSONDecodeError as e:
+            write_to_log(f"Error decoding JSON file: {str(e)}")
+        except Exception as e:
+            write_to_log(f"An unexpected error occurred: {str(e)}")
 
 
 def check_if_spoof_is_needed(available_hosts):
@@ -135,23 +96,35 @@ def check_if_spoof_is_needed(available_hosts):
     """
 
     write_to_log(f"Checking if host spoof is expired")
-    spoofed_ip_dict = load_from_json(json_file)
+    try:
+        spoofed_ip_dict = load_from_json(json_file, file_semaphore)
+    except FileNotFoundError as e:
+        write_to_log(str(e))
+        spoofed_ip_dict = {}
+    except json.JSONDecodeError as e:
+        write_to_log(f"Error decoding JSON file: {str(e)}")
+        spoofed_ip_dict = {}
+    except Exception as e:
+        write_to_log(f"An unexpected error occurred: {str(e)}")
+        spoofed_ip_dict = {}
+
     # Return all IP addresses if something goes wrong
     if not spoofed_ip_dict:
+        write_to_log(f"Trying to spoof all available IP addresses on network")
         return available_hosts
-    '''
-    # Dirty way to check if IP addresses existing in previous results belong to the same network
-    previous_results = [ip for ip in spoofed_ip_dict.keys() if ip in available_hosts]
-    # Compares if there's the same amount of identical addresses on dict and network with total items in dict
-    if len(previous_results) != len(spoofed_ip_dict):
-        # Results not coherent. Flush json file and do a complete network DHCP pool exhaustion
-        save_to_json({}, json_file)
-        return available_hosts
-    '''
+
     try:
 
         clean_host_dict = remove_expired_spoofed_hosts(spoofed_ip_dict)
-        save_to_json(clean_host_dict, json_file)
+        try:
+            save_to_json(clean_host_dict, json_file, file_semaphore)
+        except FileNotFoundError as e:
+            write_to_log(str(e))
+        except json.JSONDecodeError as e:
+            write_to_log(f"Error decoding JSON file: {str(e)}")
+        except Exception as e:
+            write_to_log(f"An unexpected error occurred: {str(e)}")
+
         # Removing already spoofed addresses from all available IP addresses list 
         available_hosts[:] = [ip for ip in available_hosts if ip not in clean_host_dict]
         #for ip, _ in clean_host_dict.items():
@@ -180,10 +153,13 @@ def remove_expired_spoofed_hosts(host_dict):
         # Comparing acquisition time to time now
         time_diff = (time_now - host.acquisition_time).total_seconds()
         if time_diff > host.lease_time or not host.is_spoofed:
+            addresses_with_expired_spoof.append(ip)
+            '''
             # Making sure it's not DHCP server
             if not host.is_server:
                 # Spoof is needed
                 addresses_with_expired_spoof.append(ip)
+                '''
     # Removing non-spoofed hosts from host_dict
     if addresses_with_expired_spoof:
         write_to_log(f"IP addresses that need re-spoofing:")
@@ -309,24 +285,28 @@ def main():
 
     write_to_log(f"Starting service")
     # Getting interface parameters
-    global our_ip_address, our_mac_address, our_netmask, our_network
-    our_ip_address, our_mac_address, our_netmask, our_network = get_network_params(iface)
+    global our_ip_address, our_mac_address, our_netmask
+    our_ip_address, our_mac_address, our_netmask, _ = get_network_params(iface)
     write_to_log(f"Interface {iface} has IPaddr: {our_ip_address}, MACaddr: {our_mac_address} and netmask: {our_netmask}")
     # Getting all host avalaible IP addresses for network
     available_hosts = get_hosts_from_network(our_ip_address, our_netmask)
     # Check previous spoofed host in json file to decide if pool exhaustion is needed for every existing ip address on network
     ip_list_to_spoof = check_if_spoof_is_needed(available_hosts)
 
-    '''
+    
     # Starting response DHCP packet capture thread
     capture_thread = threading.Thread(target=capture_dhcp_packets)
     capture_thread.daemon = True
     capture_thread.start()
-    '''
+
+    # Pool exhaustion: getting all avalaible IP from DHCP server's pool
     try:
-        # Pool exhaustion: getting all avalaible IP from DHCP server's pool
-        write_to_log(f"Starting DHCP Pool exhaustion")
+        write_to_log(f"Starting DHCP Request pool exhaustion")
         spoofed_hosts_dict = pool_exhaustion_with_request(ip_list_to_spoof)
+        if not spoofed_hosts_dict:
+            write_to_log(f"DHCP Request pool exhaustion failed. Trying with DHCP Discover exhaustion")
+
+        
         write_to_log(f"Pool exhaustion completed")
 
         # Updating json file with updated host information
@@ -335,9 +315,29 @@ def main():
         # If True: releases all ip addresses 
         if catch_and_release:
             time.sleep(5)
-            spoofed_hosts_dict = load_from_json(json_file)
+
+            try:
+                spoofed_hosts_dict = load_from_json(json_file, file_semaphore)
+            except FileNotFoundError as e:
+                write_to_log(str(e))
+                spoofed_hosts_dict = {}
+            except json.JSONDecodeError as e:
+                write_to_log(f"Error decoding JSON file: {str(e)}")
+                spoofed_hosts_dict = {}
+            except Exception as e:
+                write_to_log(f"An unexpected error occurred: {str(e)}")
+                spoofed_hosts_dict = {}
+
             release_all_ips(spoofed_hosts_dict)
-            save_to_json(spoofed_hosts_dict, json_file)
+            
+            try:
+                save_to_json(spoofed_hosts_dict, json_file)
+            except FileNotFoundError as e:
+                write_to_log(str(e))
+            except json.JSONDecodeError as e:
+                write_to_log(f"Error decoding JSON file: {str(e)}")
+            except Exception as e:
+                write_to_log(f"An unexpected error occurred: {str(e)}")
     
     except Exception as e:
 

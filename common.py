@@ -6,6 +6,7 @@ import random
 import netifaces
 import ipaddress
 import scapy.all as scapy
+import json
 import utils
 
 #### CLASSES #### ------------------------------------------------------
@@ -22,7 +23,7 @@ class fake_host:
         self.lease_time = None  # IP Address Lease Time offered by DHCP Server
         self.acquisition_time = None  # Time when IP Address was obtained/renewed
         self.is_spoofed = False  # Sets if this host has acquired successfully the IP Address
-        self.is_server = False # True when this IP address if from DHCP server's network
+        #self.is_server = False # True when this IP address if from DHCP server's network
 
     def to_dict(self):
         return {
@@ -32,8 +33,8 @@ class fake_host:
             "hostname" : self.hostname,
             "lease_time" : self.lease_time,
             "acquisition_time" : self.acquisition_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "is_spoofed" : self.is_spoofed,
-            "is_server" : self.is_server
+            "is_spoofed" : self.is_spoofed
+            #"is_server" : self.is_server
         }
     
     @classmethod
@@ -43,7 +44,7 @@ class fake_host:
         instance.lease_time = data["lease_time"]
         instance.acquisition_time = datetime.strptime(data["acquisition_time"], "%Y-%m-%d %H:%M:%S")
         instance.is_spoofed = data["is_spoofed"]
-        instance.is_server = data["is_server"]
+        #instance.is_server = data["is_server"]
         return instance
     
     @classmethod
@@ -55,6 +56,50 @@ class fake_host:
 
 
 #### COMMON FUNCTIONS #### --------------------------------------------------------
+def load_from_json(file_path, semaphore):
+    """
+    Load JSON file contents to a dictionary.
+    Raises exceptions to be handled by the caller.
+    """
+    try:
+        with semaphore:
+            with open(file_path, 'r') as file:
+                data = json.load(file)
+        
+        file_dict = {ip: fake_host.from_dict(host_data) for ip, host_data in data.items()}
+        return file_dict
+
+    except FileNotFoundError as e:
+        raise FileNotFoundError(f"File not found: {file_path}") from e
+    except json.JSONDecodeError as e:
+        raise json.JSONDecodeError(f"Error decoding JSON file: {e}", e.doc, e.pos)
+    except Exception as e:
+        raise Exception(f"Unknown error during file read: {e}") from e
+
+
+def save_to_json(results, file_path, semaphore):
+    """
+    Save a dictionary to a json file. If results is an empty dictionary, flush json file
+    """
+
+    # If results is an empty dictionary, flush json file
+    if not results:
+        with open(file_path, 'w') as file:
+            pass  
+    serializable_dict = {ip: host.to_dict() for ip, host in results.items()}
+
+    # Sort the dictionary by IP address
+    sorted_dict = dict(sorted(serializable_dict.items(), key=lambda item: ipaddress.ip_address(item[0])))
+
+    # Save the sorted dictionary to a file
+    try:
+        with semaphore:
+            with open(file_path, 'w') as file:
+                json.dump(sorted_dict, file, indent=4)
+    except Exception as e:
+        raise Exception(f"Error saving JSON file: {e}") from e
+
+
 def get_network_params(iface_name):
     """
     Get IP address, MAC address, netmask and network address from selected interface
@@ -137,11 +182,45 @@ def get_dhcp_options(packet):
 
 def capture_dhcp_packets(packet_list, interface):
     """
-    Capture DHCP packets and stores them in the `captured_packets` list
+    Capture incoming DHCP packets and stores them in the `captured_packets` list
     """
     def packet_handler(pkt):
         if pkt.haslayer(scapy.DHCP):
             packet_list.append(pkt)
 
-    #scapy.sniff(iface=iface, filter="udp and dst port 68", prn=packet_handler, store=0)
-    scapy.sniff(iface=interface, filter="udp and (port 67 or port 68)", prn=packet_handler, store=0)
+    scapy.sniff(iface=interface, filter="udp and dst port 68", prn=packet_handler, store=0)
+    #scapy.sniff(iface=interface, filter="udp and (port 67 or port 68)", prn=packet_handler, store=0)
+
+
+def handle_dhcp_response(packet, host):
+    """
+    Handles response to DHCP Request packet
+    """
+    # Option 2: DHCP Offer (response to Discover)
+    if packet[scapy.DHCP].options[0][1] == 2:
+
+        # Updating the fake host's IP address - BOOTP header RFC951
+        host.ip_address = packet[scapy.BOOTP].yiaddr
+
+        return "OFFER"
+
+    # Option 5: DHCP ACK, IP address successfully linked to host by router's DHCP server        
+    if packet[scapy.DHCP].options[0][1] == 5:
+
+        # Getting client info - RFC951
+        host_ip = packet[scapy.BOOTP].yiaddr
+        # Updating the fake host's attributes with DHCP server's final decision
+        dhcp_opts = get_dhcp_options(packet)
+        host.ip_address = host_ip
+        host.lease_time = dhcp_opts['lease_time']
+        host.acquisition_time = datetime.now()
+        host.is_spoofed = True
+
+        return "ACK"
+    
+    # Option 6: DHCP NAK, unable to obtain a dynamic IP address
+    elif packet[scapy.DHCP].options[0][1] == 6:
+
+        return "NAK"
+    
+    return None
