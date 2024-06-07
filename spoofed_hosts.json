@@ -1,1 +1,893 @@
-{}
+{
+    "192.168.1.101": {
+        "ip_address": "192.168.1.101",
+        "mac_address": "34:a4:c6:b1:4e:b9",
+        "transaction_id": 459464353,
+        "hostname": "DESKTOP-FRCZLO9",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:20",
+        "is_spoofed": true
+    },
+    "192.168.1.102": {
+        "ip_address": "192.168.1.102",
+        "mac_address": "34:42:02:7f:6e:38",
+        "transaction_id": 1414363203,
+        "hostname": "DESKTOP-6JMVL4Y",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:21",
+        "is_spoofed": true
+    },
+    "192.168.1.103": {
+        "ip_address": "192.168.1.103",
+        "mac_address": "34:5b:c8:f7:d2:99",
+        "transaction_id": 2797240028,
+        "hostname": "DESKTOP-39ONPNQ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:21",
+        "is_spoofed": true
+    },
+    "192.168.1.104": {
+        "ip_address": "192.168.1.104",
+        "mac_address": "34:34:9d:83:aa:40",
+        "transaction_id": 326053928,
+        "hostname": "DESKTOP-MH5GV6S",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:22",
+        "is_spoofed": true
+    },
+    "192.168.1.105": {
+        "ip_address": "192.168.1.105",
+        "mac_address": "34:db:9e:6f:41:f8",
+        "transaction_id": 3092133726,
+        "hostname": "DESKTOP-W1MNL5Y",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:22",
+        "is_spoofed": true
+    },
+    "192.168.1.106": {
+        "ip_address": "192.168.1.106",
+        "mac_address": "34:9e:97:ed:32:71",
+        "transaction_id": 2163081879,
+        "hostname": "DESKTOP-A52QHDJ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:23",
+        "is_spoofed": true
+    },
+    "192.168.1.107": {
+        "ip_address": "192.168.1.107",
+        "mac_address": "34:1c:be:bc:1b:78",
+        "transaction_id": 2222234871,
+        "hostname": "DESKTOP-CQ24F5L",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:24",
+        "is_spoofed": true
+    },
+    "192.168.1.108": {
+        "ip_address": "192.168.1.108",
+        "mac_address": "34:19:ec:cc:92:fb",
+        "transaction_id": 2498860888,
+        "hostname": "DESKTOP-LXXJB2Q",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:24",
+        "is_spoofed": true
+    },
+    "192.168.1.109": {
+        "ip_address": "192.168.1.109",
+        "mac_address": "34:eb:71:b3:03:40",
+        "transaction_id": 3183416214,
+        "hostname": "DESKTOP-UNLTVNL",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:25",
+        "is_spoofed": true
+    },
+    "192.168.1.110": {
+        "ip_address": "192.168.1.110",
+        "mac_address": "34:71:d3:09:d3:36",
+        "transaction_id": 4090923597,
+        "hostname": "DESKTOP-K18F80E",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:25",
+        "is_spoofed": true
+    },
+    "192.168.1.111": {
+        "ip_address": "192.168.1.111",
+        "mac_address": "34:6f:58:ea:37:55",
+        "transaction_id": 3165100194,
+        "hostname": "DESKTOP-UK16D5B",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:26",
+        "is_spoofed": true
+    },
+    "192.168.1.112": {
+        "ip_address": "192.168.1.112",
+        "mac_address": "34:c1:5f:28:b8:18",
+        "transaction_id": 3933753060,
+        "hostname": "DESKTOP-PQTNZQG",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:26",
+        "is_spoofed": true
+    },
+    "192.168.1.113": {
+        "ip_address": "192.168.1.113",
+        "mac_address": "34:49:90:b7:51:0d",
+        "transaction_id": 2943721237,
+        "hostname": "DESKTOP-8329EKS",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:27",
+        "is_spoofed": true
+    },
+    "192.168.1.114": {
+        "ip_address": "192.168.1.114",
+        "mac_address": "34:fc:8e:f7:f7:8e",
+        "transaction_id": 1407211061,
+        "hostname": "DESKTOP-SEL9L1D",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:27",
+        "is_spoofed": true
+    },
+    "192.168.1.115": {
+        "ip_address": "192.168.1.115",
+        "mac_address": "34:04:d7:5e:77:5b",
+        "transaction_id": 2365494875,
+        "hostname": "DESKTOP-WZE22RP",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:28",
+        "is_spoofed": true
+    },
+    "192.168.1.116": {
+        "ip_address": "192.168.1.116",
+        "mac_address": "34:0c:5d:b9:e6:26",
+        "transaction_id": 2402443436,
+        "hostname": "DESKTOP-3MMW9MD",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:28",
+        "is_spoofed": true
+    },
+    "192.168.1.117": {
+        "ip_address": "192.168.1.117",
+        "mac_address": "34:0a:da:f3:b4:95",
+        "transaction_id": 4006029464,
+        "hostname": "DESKTOP-JZNIAU9",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:29",
+        "is_spoofed": true
+    },
+    "192.168.1.118": {
+        "ip_address": "192.168.1.118",
+        "mac_address": "34:2f:5d:84:57:d7",
+        "transaction_id": 1946100319,
+        "hostname": "DESKTOP-0AXR1YS",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:30",
+        "is_spoofed": true
+    },
+    "192.168.1.119": {
+        "ip_address": "192.168.1.119",
+        "mac_address": "34:1b:21:c6:c6:d8",
+        "transaction_id": 2443346285,
+        "hostname": "DESKTOP-FTF92CM",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:30",
+        "is_spoofed": true
+    },
+    "192.168.1.120": {
+        "ip_address": "192.168.1.120",
+        "mac_address": "34:74:79:3c:bc:09",
+        "transaction_id": 252239584,
+        "hostname": "DESKTOP-KBMB0X7",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:31",
+        "is_spoofed": true
+    },
+    "192.168.1.121": {
+        "ip_address": "192.168.1.121",
+        "mac_address": "34:fa:b5:96:78:13",
+        "transaction_id": 4027653162,
+        "hostname": "DESKTOP-74B3IR0",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:31",
+        "is_spoofed": true
+    },
+    "192.168.1.122": {
+        "ip_address": "192.168.1.122",
+        "mac_address": "34:6b:6a:a8:01:fb",
+        "transaction_id": 3071389026,
+        "hostname": "DESKTOP-6OAL3H6",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:32",
+        "is_spoofed": true
+    },
+    "192.168.1.123": {
+        "ip_address": "192.168.1.123",
+        "mac_address": "34:30:c8:3b:10:06",
+        "transaction_id": 955158318,
+        "hostname": "DESKTOP-KIDT3TV",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:32",
+        "is_spoofed": true
+    },
+    "192.168.1.124": {
+        "ip_address": "192.168.1.124",
+        "mac_address": "34:69:fe:27:66:fc",
+        "transaction_id": 551071448,
+        "hostname": "DESKTOP-KO1Z7JP",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:33",
+        "is_spoofed": true
+    },
+    "192.168.1.125": {
+        "ip_address": "192.168.1.125",
+        "mac_address": "34:6a:6e:b7:25:ff",
+        "transaction_id": 571767481,
+        "hostname": "DESKTOP-T1ZVI3H",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:33",
+        "is_spoofed": true
+    },
+    "192.168.1.126": {
+        "ip_address": "192.168.1.126",
+        "mac_address": "34:80:b4:f1:02:27",
+        "transaction_id": 1472690153,
+        "hostname": "DESKTOP-4X0EMAS",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:34",
+        "is_spoofed": true
+    },
+    "192.168.1.127": {
+        "ip_address": "192.168.1.127",
+        "mac_address": "34:c2:6b:a2:9f:46",
+        "transaction_id": 2865423,
+        "hostname": "DESKTOP-0A5AE8W",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:34",
+        "is_spoofed": true
+    },
+    "192.168.1.128": {
+        "ip_address": "192.168.1.128",
+        "mac_address": "34:7c:35:19:df:ce",
+        "transaction_id": 1551243205,
+        "hostname": "DESKTOP-PVVECHQ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:35",
+        "is_spoofed": true
+    },
+    "192.168.1.129": {
+        "ip_address": "192.168.1.129",
+        "mac_address": "34:a1:c3:69:51:69",
+        "transaction_id": 478172384,
+        "hostname": "DESKTOP-Z3ZQA4W",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:35",
+        "is_spoofed": true
+    },
+    "192.168.1.130": {
+        "ip_address": "192.168.1.130",
+        "mac_address": "34:0f:1c:34:95:a9",
+        "transaction_id": 1449226174,
+        "hostname": "DESKTOP-UOXI2QM",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:36",
+        "is_spoofed": true
+    },
+    "192.168.1.131": {
+        "ip_address": "192.168.1.131",
+        "mac_address": "34:b0:18:f5:56:1f",
+        "transaction_id": 747867343,
+        "hostname": "DESKTOP-QYY5PHQ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:37",
+        "is_spoofed": true
+    },
+    "192.168.1.132": {
+        "ip_address": "192.168.1.132",
+        "mac_address": "34:ad:35:14:ae:99",
+        "transaction_id": 1615243410,
+        "hostname": "DESKTOP-BE8WIR3",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:37",
+        "is_spoofed": true
+    },
+    "192.168.1.133": {
+        "ip_address": "192.168.1.133",
+        "mac_address": "34:38:28:8f:a4:d6",
+        "transaction_id": 52476811,
+        "hostname": "DESKTOP-5B2SVKN",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:38",
+        "is_spoofed": true
+    },
+    "192.168.1.134": {
+        "ip_address": "192.168.1.134",
+        "mac_address": "34:81:fc:aa:51:37",
+        "transaction_id": 686577195,
+        "hostname": "DESKTOP-NQRL1LH",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:38",
+        "is_spoofed": true
+    },
+    "192.168.1.135": {
+        "ip_address": "192.168.1.135",
+        "mac_address": "34:8b:e4:25:58:b9",
+        "transaction_id": 3946352940,
+        "hostname": "DESKTOP-NK35YWC",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:39",
+        "is_spoofed": true
+    },
+    "192.168.1.136": {
+        "ip_address": "192.168.1.136",
+        "mac_address": "34:24:ca:50:f8:08",
+        "transaction_id": 1901948473,
+        "hostname": "DESKTOP-OHQ10ZO",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:39",
+        "is_spoofed": true
+    },
+    "192.168.1.137": {
+        "ip_address": "192.168.1.137",
+        "mac_address": "34:71:9f:34:04:e9",
+        "transaction_id": 3351081153,
+        "hostname": "DESKTOP-W2KRH1V",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:40",
+        "is_spoofed": true
+    },
+    "192.168.1.138": {
+        "ip_address": "192.168.1.138",
+        "mac_address": "34:ab:8c:d9:3e:ca",
+        "transaction_id": 165654861,
+        "hostname": "DESKTOP-APB6X42",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:40",
+        "is_spoofed": true
+    },
+    "192.168.1.139": {
+        "ip_address": "192.168.1.139",
+        "mac_address": "34:ca:6e:d2:44:ba",
+        "transaction_id": 2114599366,
+        "hostname": "DESKTOP-LKIEXNQ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:41",
+        "is_spoofed": true
+    },
+    "192.168.1.140": {
+        "ip_address": "192.168.1.140",
+        "mac_address": "34:8c:85:16:a9:bd",
+        "transaction_id": 2658940945,
+        "hostname": "DESKTOP-V9BN8ZX",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:41",
+        "is_spoofed": true
+    },
+    "192.168.1.141": {
+        "ip_address": "192.168.1.141",
+        "mac_address": "34:1a:31:3a:ce:f5",
+        "transaction_id": 1561341110,
+        "hostname": "DESKTOP-29DZ2QJ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:42",
+        "is_spoofed": true
+    },
+    "192.168.1.142": {
+        "ip_address": "192.168.1.142",
+        "mac_address": "34:f7:2f:db:78:67",
+        "transaction_id": 2002061214,
+        "hostname": "DESKTOP-JDJ1WSZ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:43",
+        "is_spoofed": true
+    },
+    "192.168.1.143": {
+        "ip_address": "192.168.1.143",
+        "mac_address": "34:71:34:8a:27:5c",
+        "transaction_id": 879752573,
+        "hostname": "DESKTOP-LOILKN1",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:43",
+        "is_spoofed": true
+    },
+    "192.168.1.144": {
+        "ip_address": "192.168.1.144",
+        "mac_address": "34:ef:d7:79:c9:cb",
+        "transaction_id": 3068650993,
+        "hostname": "DESKTOP-CVLPXC3",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:44",
+        "is_spoofed": true
+    },
+    "192.168.1.145": {
+        "ip_address": "192.168.1.145",
+        "mac_address": "34:59:2a:11:bd:4e",
+        "transaction_id": 1801464337,
+        "hostname": "DESKTOP-LUR8ZPP",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:44",
+        "is_spoofed": true
+    },
+    "192.168.1.146": {
+        "ip_address": "192.168.1.146",
+        "mac_address": "34:82:85:4c:dd:ec",
+        "transaction_id": 995834451,
+        "hostname": "DESKTOP-8W8QVD3",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:45",
+        "is_spoofed": true
+    },
+    "192.168.1.147": {
+        "ip_address": "192.168.1.147",
+        "mac_address": "34:42:6e:9a:c7:ea",
+        "transaction_id": 2554664938,
+        "hostname": "DESKTOP-WTRTQ0B",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:45",
+        "is_spoofed": true
+    },
+    "192.168.1.148": {
+        "ip_address": "192.168.1.148",
+        "mac_address": "34:18:af:e4:e3:8f",
+        "transaction_id": 1505976645,
+        "hostname": "DESKTOP-7DVLYTU",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:46",
+        "is_spoofed": true
+    },
+    "192.168.1.149": {
+        "ip_address": "192.168.1.149",
+        "mac_address": "34:9c:03:ac:35:7d",
+        "transaction_id": 1771002760,
+        "hostname": "DESKTOP-BULPIMX",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:46",
+        "is_spoofed": true
+    },
+    "192.168.1.150": {
+        "ip_address": "192.168.1.150",
+        "mac_address": "34:f2:a4:90:e7:36",
+        "transaction_id": 904214202,
+        "hostname": "DESKTOP-ITFC3ZV",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:47",
+        "is_spoofed": true
+    },
+    "192.168.1.151": {
+        "ip_address": "192.168.1.151",
+        "mac_address": "34:dc:ce:a7:56:03",
+        "transaction_id": 1208656004,
+        "hostname": "DESKTOP-3RSSS44",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:47",
+        "is_spoofed": true
+    },
+    "192.168.1.152": {
+        "ip_address": "192.168.1.152",
+        "mac_address": "34:e4:4f:cc:b0:55",
+        "transaction_id": 761481971,
+        "hostname": "DESKTOP-LNX0GI3",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:48",
+        "is_spoofed": true
+    },
+    "192.168.1.153": {
+        "ip_address": "192.168.1.153",
+        "mac_address": "34:71:04:6c:b3:6d",
+        "transaction_id": 361523056,
+        "hostname": "DESKTOP-5NPVEUA",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:53",
+        "is_spoofed": true
+    },
+    "192.168.1.154": {
+        "ip_address": "192.168.1.154",
+        "mac_address": "34:60:9b:74:df:9f",
+        "transaction_id": 964667069,
+        "hostname": "DESKTOP-S4Q1Y3V",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:49",
+        "is_spoofed": true
+    },
+    "192.168.1.155": {
+        "ip_address": "192.168.1.155",
+        "mac_address": "34:fb:67:2f:2c:c6",
+        "transaction_id": 2616071646,
+        "hostname": "DESKTOP-QC02D5D",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:49",
+        "is_spoofed": true
+    },
+    "192.168.1.156": {
+        "ip_address": "192.168.1.156",
+        "mac_address": "34:64:cc:5d:9e:75",
+        "transaction_id": 3852173392,
+        "hostname": "DESKTOP-GYTUKL7",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:50",
+        "is_spoofed": true
+    },
+    "192.168.1.157": {
+        "ip_address": "192.168.1.157",
+        "mac_address": "34:d4:e7:47:8f:1e",
+        "transaction_id": 2916502954,
+        "hostname": "DESKTOP-RV6OGTQ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:50",
+        "is_spoofed": true
+    },
+    "192.168.1.158": {
+        "ip_address": "192.168.1.158",
+        "mac_address": "34:ed:fb:81:89:6e",
+        "transaction_id": 4146596081,
+        "hostname": "DESKTOP-C7LD98P",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:51",
+        "is_spoofed": true
+    },
+    "192.168.1.159": {
+        "ip_address": "192.168.1.159",
+        "mac_address": "34:55:f1:27:a0:3f",
+        "transaction_id": 1536431506,
+        "hostname": "DESKTOP-V3HIAZO",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:51",
+        "is_spoofed": true
+    },
+    "192.168.1.160": {
+        "ip_address": "192.168.1.160",
+        "mac_address": "34:fb:1b:af:0d:48",
+        "transaction_id": 3199531756,
+        "hostname": "DESKTOP-YI0YSCS",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:52",
+        "is_spoofed": true
+    },
+    "192.168.1.161": {
+        "ip_address": "192.168.1.161",
+        "mac_address": "34:dd:db:0e:0a:ad",
+        "transaction_id": 1134927207,
+        "hostname": "DESKTOP-RIWMN36",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:52",
+        "is_spoofed": true
+    },
+    "192.168.1.162": {
+        "ip_address": "192.168.1.162",
+        "mac_address": "34:29:54:9a:1f:27",
+        "transaction_id": 924934245,
+        "hostname": "DESKTOP-FTRI1CO",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:53",
+        "is_spoofed": true
+    },
+    "192.168.1.163": {
+        "ip_address": "192.168.1.163",
+        "mac_address": "34:2c:d3:9c:2e:52",
+        "transaction_id": 1997426027,
+        "hostname": "DESKTOP-SSSZDLA",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:53",
+        "is_spoofed": true
+    },
+    "192.168.1.164": {
+        "ip_address": "192.168.1.164",
+        "mac_address": "34:a5:04:e3:7b:f9",
+        "transaction_id": 2495118096,
+        "hostname": "DESKTOP-O5MZS1A",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:54",
+        "is_spoofed": true
+    },
+    "192.168.1.165": {
+        "ip_address": "192.168.1.165",
+        "mac_address": "34:0a:31:77:6d:e5",
+        "transaction_id": 1566128548,
+        "hostname": "DESKTOP-Z923KUO",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:55",
+        "is_spoofed": true
+    },
+    "192.168.1.166": {
+        "ip_address": "192.168.1.166",
+        "mac_address": "34:d0:d8:b0:9a:be",
+        "transaction_id": 2014660415,
+        "hostname": "DESKTOP-A7VZY3D",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:55",
+        "is_spoofed": true
+    },
+    "192.168.1.167": {
+        "ip_address": "192.168.1.167",
+        "mac_address": "34:49:c9:43:3d:20",
+        "transaction_id": 423573188,
+        "hostname": "DESKTOP-YNQEIHI",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:56",
+        "is_spoofed": true
+    },
+    "192.168.1.168": {
+        "ip_address": "192.168.1.168",
+        "mac_address": "34:0c:d6:a0:8c:ef",
+        "transaction_id": 426719784,
+        "hostname": "DESKTOP-N8W0DVT",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:56",
+        "is_spoofed": true
+    },
+    "192.168.1.169": {
+        "ip_address": "192.168.1.169",
+        "mac_address": "34:d8:15:e8:de:35",
+        "transaction_id": 1014215755,
+        "hostname": "DESKTOP-A9SA3RT",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:57",
+        "is_spoofed": true
+    },
+    "192.168.1.170": {
+        "ip_address": "192.168.1.170",
+        "mac_address": "34:f0:97:44:d2:c4",
+        "transaction_id": 2392387834,
+        "hostname": "DESKTOP-YFTMFZU",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:57",
+        "is_spoofed": true
+    },
+    "192.168.1.171": {
+        "ip_address": "192.168.1.171",
+        "mac_address": "34:a0:f9:04:67:a5",
+        "transaction_id": 2590278602,
+        "hostname": "DESKTOP-53IM1Y5",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:58",
+        "is_spoofed": true
+    },
+    "192.168.1.172": {
+        "ip_address": "192.168.1.172",
+        "mac_address": "34:28:73:51:7f:f1",
+        "transaction_id": 3270029619,
+        "hostname": "DESKTOP-8LU787J",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:58",
+        "is_spoofed": true
+    },
+    "192.168.1.173": {
+        "ip_address": "192.168.1.173",
+        "mac_address": "34:85:73:5e:90:a5",
+        "transaction_id": 2484492500,
+        "hostname": "DESKTOP-J2XLSPZ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:59",
+        "is_spoofed": true
+    },
+    "192.168.1.174": {
+        "ip_address": "192.168.1.174",
+        "mac_address": "34:ab:97:74:a4:74",
+        "transaction_id": 3937647845,
+        "hostname": "DESKTOP-XSOKBI4",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:06:59",
+        "is_spoofed": true
+    },
+    "192.168.1.175": {
+        "ip_address": "192.168.1.175",
+        "mac_address": "34:7f:f4:c7:67:c1",
+        "transaction_id": 431462322,
+        "hostname": "DESKTOP-TQRKXDN",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:00",
+        "is_spoofed": true
+    },
+    "192.168.1.176": {
+        "ip_address": "192.168.1.176",
+        "mac_address": "34:2f:78:d7:9f:f4",
+        "transaction_id": 2700787961,
+        "hostname": "DESKTOP-W4SVFMQ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:01",
+        "is_spoofed": true
+    },
+    "192.168.1.177": {
+        "ip_address": "192.168.1.177",
+        "mac_address": "34:4a:40:a2:05:4f",
+        "transaction_id": 1767423800,
+        "hostname": "DESKTOP-KSOZW1O",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:01",
+        "is_spoofed": true
+    },
+    "192.168.1.178": {
+        "ip_address": "192.168.1.178",
+        "mac_address": "34:0e:9d:83:96:67",
+        "transaction_id": 1570024436,
+        "hostname": "DESKTOP-PIVGM7E",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:02",
+        "is_spoofed": true
+    },
+    "192.168.1.179": {
+        "ip_address": "192.168.1.179",
+        "mac_address": "34:f5:f9:2b:22:b9",
+        "transaction_id": 1917060896,
+        "hostname": "DESKTOP-3C26P9K",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:02",
+        "is_spoofed": true
+    },
+    "192.168.1.180": {
+        "ip_address": "192.168.1.180",
+        "mac_address": "34:96:55:e4:fe:75",
+        "transaction_id": 840357016,
+        "hostname": "DESKTOP-F29J5QS",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:03",
+        "is_spoofed": true
+    },
+    "192.168.1.181": {
+        "ip_address": "192.168.1.181",
+        "mac_address": "34:4d:af:3d:d1:10",
+        "transaction_id": 2505080355,
+        "hostname": "DESKTOP-64ECBEJ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:03",
+        "is_spoofed": true
+    },
+    "192.168.1.182": {
+        "ip_address": "192.168.1.182",
+        "mac_address": "34:86:4b:6f:cb:21",
+        "transaction_id": 4290638747,
+        "hostname": "DESKTOP-H2Y6AFT",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:04",
+        "is_spoofed": true
+    },
+    "192.168.1.183": {
+        "ip_address": "192.168.1.183",
+        "mac_address": "34:ac:0f:6c:ae:3e",
+        "transaction_id": 1772823556,
+        "hostname": "DESKTOP-5WY25NK",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:04",
+        "is_spoofed": true
+    },
+    "192.168.1.184": {
+        "ip_address": "192.168.1.184",
+        "mac_address": "34:6d:30:c8:c8:c0",
+        "transaction_id": 1536783018,
+        "hostname": "DESKTOP-DLLL0FK",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:05",
+        "is_spoofed": true
+    },
+    "192.168.1.185": {
+        "ip_address": "192.168.1.185",
+        "mac_address": "34:9f:26:ad:6d:bb",
+        "transaction_id": 1574033569,
+        "hostname": "DESKTOP-2KTRIOC",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:05",
+        "is_spoofed": true
+    },
+    "192.168.1.186": {
+        "ip_address": "192.168.1.186",
+        "mac_address": "34:aa:21:32:d7:57",
+        "transaction_id": 2310496767,
+        "hostname": "DESKTOP-IGBGEJF",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:06",
+        "is_spoofed": true
+    },
+    "192.168.1.187": {
+        "ip_address": "192.168.1.187",
+        "mac_address": "34:b9:8f:6e:cb:25",
+        "transaction_id": 317007497,
+        "hostname": "DESKTOP-628UOGU",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:07",
+        "is_spoofed": true
+    },
+    "192.168.1.188": {
+        "ip_address": "192.168.1.188",
+        "mac_address": "34:99:5d:60:a2:ff",
+        "transaction_id": 3340707698,
+        "hostname": "DESKTOP-R8R7SIW",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:07",
+        "is_spoofed": true
+    },
+    "192.168.1.189": {
+        "ip_address": "192.168.1.189",
+        "mac_address": "34:bd:06:3b:ef:bd",
+        "transaction_id": 3958314522,
+        "hostname": "DESKTOP-O9ZKVDD",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:08",
+        "is_spoofed": true
+    },
+    "192.168.1.190": {
+        "ip_address": "192.168.1.190",
+        "mac_address": "34:45:10:47:2d:46",
+        "transaction_id": 1702066077,
+        "hostname": "DESKTOP-LBLFUP9",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:08",
+        "is_spoofed": true
+    },
+    "192.168.1.191": {
+        "ip_address": "192.168.1.191",
+        "mac_address": "34:85:12:f6:c7:2a",
+        "transaction_id": 1469843036,
+        "hostname": "DESKTOP-BN5YZEX",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:09",
+        "is_spoofed": true
+    },
+    "192.168.1.192": {
+        "ip_address": "192.168.1.192",
+        "mac_address": "34:c3:6e:a2:04:e0",
+        "transaction_id": 3485636359,
+        "hostname": "DESKTOP-PTL36MY",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:09",
+        "is_spoofed": true
+    },
+    "192.168.1.193": {
+        "ip_address": "192.168.1.193",
+        "mac_address": "34:b2:d4:f8:60:aa",
+        "transaction_id": 727210172,
+        "hostname": "DESKTOP-W7HFA2D",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:10",
+        "is_spoofed": true
+    },
+    "192.168.1.194": {
+        "ip_address": "192.168.1.194",
+        "mac_address": "34:80:7a:38:8d:1e",
+        "transaction_id": 453157321,
+        "hostname": "DESKTOP-AECFCGF",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:10",
+        "is_spoofed": true
+    },
+    "192.168.1.195": {
+        "ip_address": "192.168.1.195",
+        "mac_address": "34:e9:4d:eb:81:83",
+        "transaction_id": 3777930113,
+        "hostname": "DESKTOP-B3B72RI",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:11",
+        "is_spoofed": true
+    },
+    "192.168.1.196": {
+        "ip_address": "192.168.1.196",
+        "mac_address": "34:00:86:81:41:12",
+        "transaction_id": 240756627,
+        "hostname": "DESKTOP-SFHTLLJ",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:11",
+        "is_spoofed": true
+    },
+    "192.168.1.197": {
+        "ip_address": "192.168.1.197",
+        "mac_address": "34:cb:39:2a:83:f9",
+        "transaction_id": 2660447226,
+        "hostname": "DESKTOP-4BPIIB1",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:12",
+        "is_spoofed": true
+    },
+    "192.168.1.198": {
+        "ip_address": "192.168.1.198",
+        "mac_address": "34:d0:db:10:d2:12",
+        "transaction_id": 3619544420,
+        "hostname": "DESKTOP-YBSSP56",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:13",
+        "is_spoofed": true
+    },
+    "192.168.1.199": {
+        "ip_address": "192.168.1.199",
+        "mac_address": "34:ed:5b:70:c8:7f",
+        "transaction_id": 814291632,
+        "hostname": "DESKTOP-2G5RYT0",
+        "lease_time": 600,
+        "acquisition_time": "2024-06-08 00:07:13",
+        "is_spoofed": true
+    }
+}
