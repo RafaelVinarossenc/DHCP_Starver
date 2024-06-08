@@ -43,7 +43,7 @@ class fake_host:
         self.lease_time = None  # IP Address Lease Time offered by DHCP Server
         self.acquisition_time = None  # Time when IP Address was obtained/renewed
         self.is_spoofed = False  # Sets if this host has acquired successfully the IP Address
-        #self.is_server = False # True when this IP address if from DHCP server's network
+        self.is_server = False # True when this IP address if from DHCP server's network
 
     def to_dict(self):
         return {
@@ -53,8 +53,8 @@ class fake_host:
             "hostname" : self.hostname,
             "lease_time" : self.lease_time,
             "acquisition_time" : self.acquisition_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "is_spoofed" : self.is_spoofed
-            #"is_server" : self.is_server
+            "is_spoofed" : self.is_spoofed,
+            "is_server" : self.is_server
         }
     
     @classmethod
@@ -64,7 +64,7 @@ class fake_host:
         instance.lease_time = data["lease_time"]
         instance.acquisition_time = datetime.strptime(data["acquisition_time"], "%Y-%m-%d %H:%M:%S")
         instance.is_spoofed = data["is_spoofed"]
-        #instance.is_server = data["is_server"]
+        instance.is_server = data["is_server"]
         return instance
     
     @classmethod
@@ -103,9 +103,12 @@ def save_to_json(results, file_path, semaphore):
     """
 
     # If results is an empty dictionary, flush json file
+    
     if not results:
-        with open(file_path, 'w') as file:
-            pass  
+        with semaphore:
+            with open(file_path, 'w') as file:
+                pass  
+    
     serializable_dict = {ip: host.to_dict() for ip, host in results.items()}
 
     # Sort the dictionary by IP address
@@ -131,7 +134,7 @@ def get_network_params(iface_name):
         network_mask = iface[netifaces.AF_INET][0]['netmask']
         # Obtaining network address
         network_address = ipaddress.ip_network(f"{ip_address}/{network_mask}", strict=False)
-        return ip_address, mac_address, network_mask, str(network_address)
+        return ip_address, mac_address, network_mask, network_address
     except (KeyError, IndexError):
         return None, None, None, None
 
