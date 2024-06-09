@@ -8,13 +8,16 @@ import ipaddress
 import scapy.all as scapy
 import json
 import time
+from pathlib import Path
 import utils
 from utils import write_to_log
+base_dir = Path(__file__).resolve().parent
+json_file = base_dir / "spoofed_hosts.json"
 
 
 #### GLOBAL VARIABLES #### ---------------------------------------------------------
 iface = "eth0"  # Network interface to spoof
-json_file = "/home/pi/dhcp_starver/spoofed_hosts.json"
+#json_file = "spoofed_hosts.json"
 # List to store captured DHCP packets
 captured_packets = []
 

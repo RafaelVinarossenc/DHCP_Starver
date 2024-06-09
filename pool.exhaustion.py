@@ -12,14 +12,17 @@ import time
 import json
 import threading
 from datetime import datetime
+from pathlib import Path
 from common import *
 from utils import setup_logging, write_to_log, file_semaphore
 
 
 #### CONFIG #### -------------------------------------------------------------------
-timeout_to_receive_response = 2 # Time to wait until non response is decided
+timeout_to_receive_response = 5 # Time to wait until non response is decided
 catch_and_release = False # Debug mode. Pool exhaustion + save results + Load results + Release + Save results
-log_file = "/home/pi/dhcp_starver/logs/pool_exhaustion.log"
+base_dir = Path(__file__).resolve().parent
+log_file = base_dir / "logs" / "pool_exhaustion.log"
+#log_file = "logs/pool_exhaustion.log"
 
 #file_semaphore = threading.Semaphore()
 
@@ -73,7 +76,7 @@ def check_if_spoof_is_needed(available_hosts, network):
         write_to_log(f"Trying to spoof all available IP addresses on network")
         return available_hosts
 
-    '''
+    
     # Check if previous results belong to the same network
     if not ips_in_same_network(spoofed_ip_dict.keys(), network):
         # If not, flush JSON file and spoof all addresses
@@ -88,7 +91,7 @@ def check_if_spoof_is_needed(available_hosts, network):
 
         write_to_log(f"Previous results' network changed. Trying to spoof all available IP addresses on actual network")
         return available_hosts
-    '''
+    
 
     try:
 
@@ -297,7 +300,7 @@ def release_all_ips(host_dict):
         time.sleep(0.25)
     write_to_log(f"All IP addresses have been released!")
 
-'''
+
 def ips_in_same_network(ip_list, actual_network):
     """
     Check if each IP in the list belongs to the same network as actual_ip.
@@ -310,7 +313,7 @@ def ips_in_same_network(ip_list, actual_network):
             return False
     
     return True
-'''
+
 
 def main():
 

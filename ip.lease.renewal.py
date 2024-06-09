@@ -2,12 +2,16 @@
 
 import threading
 #import logging
+from pathlib import Path
 from common import *
 from utils import setup_logging, write_to_log, file_semaphore
 
 
 timeout_to_receive_dhcp_response = 10 # seconds
-log_file = "/home/pi/dhcp_starver/logs/lease_renewal.log"
+
+base_dir = Path(__file__).resolve().parent
+log_file = base_dir / "logs" / "lease_renewal.log"
+#log_file = "logs/lease_renewal.log"
 
 # Define a semaphore for .log/.json file access without collision
 #file_semaphore = threading.Semaphore()
