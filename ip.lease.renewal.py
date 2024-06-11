@@ -1,83 +1,24 @@
 # ip.lease.renewal.py
 
+
+#### IMPORTS #### -------------------------------------------------------------------
 import threading
-#import logging
 from pathlib import Path
 from common import *
 from utils import setup_logging, write_to_log, file_semaphore
 
 
+#### CONFIG #### -------------------------------------------------------------------
 timeout_to_receive_dhcp_response = 10 # seconds
 
 base_dir = Path(__file__).resolve().parent
 log_file = base_dir / "logs" / "lease_renewal.log"
-#log_file = "logs/lease_renewal.log"
-
-# Define a semaphore for .log/.json file access without collision
-#file_semaphore = threading.Semaphore()
 
 setup_logging(log_file)
 
-'''
-def write_to_log(message):
-    """
-    Write message to log file.
-    This function uses the semaphore to ensure that log writes do not collide.
-    """
-    with file_semaphore:
-        logger = logging.getLogger()
-        logger.info(message)
-'''
-def update_json_file(updated_ip_dict, file_path):
-        """
-        Update json file with new information.
-        Load specified file into a dictionary, adds new entries and save it to JSON file.
-        """
-        try:
-            # Load previous results from JSON file
-            dict_on_file = load_from_json(file_path, file_semaphore)
 
-            # Update previous results with new hosts' information
-            for ip, host in updated_ip_dict.items():
-                dict_on_file[ip] = host
-            # Save updated results back to the JSON file
-            save_to_json(dict_on_file, file_path, file_semaphore)
-        except FileNotFoundError as e:
-            write_to_log(str(e))
-        except json.JSONDecodeError as e:
-            write_to_log(f"Error decoding JSON file: {str(e)}")
-        except Exception as e:
-            write_to_log(f"An unexpected error occurred: {str(e)}")
-'''
-def process_dhcp_packet(transaction_id, timeout):
-    """
-    Periodically checks for a DHCP packet matching the transaction.
-    """
-    start_time = time.time()
-    while time.time() - start_time < timeout:
+#### FUNCTIONS #### ----------------------------------------------------------------
 
-        for pkt in captured_packets:
-
-            # Check if packet if DHCP and it's transaction id matches our current transaction
-            if scapy.DHCP in pkt:
-
-                if pkt[scapy.BOOTP].xid == transaction_id:
-
-                    captured_packets.remove(pkt)
-                    return pkt
-                
-                # If an foreign ACK is received, it's interesting to know who gets what ip address
-                elif pkt[scapy.DHCP].options[0][1] == 5:
-
-                    host_mac = mac_to_str(pkt[scapy.BOOTP].chaddr)
-                    host_ip = pkt[scapy.BOOTP].yiaddr
-                    write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
-                    captured_packets.remove(pkt)
-            
-        time.sleep(0.25)
-
-    return None
-'''
 def is_ip_renew_needed(lease_time, acquisition_time):
     """
     Compares adquisition time and time now to evaluate if an IP renewal is needed
@@ -124,16 +65,28 @@ def send_renewal_request(host, dhcp_server_ip, dhcp_server_mac):
             write_to_log(f"ACK received: {host.mac_address} successfully renewed to {host.ip_address}")
             host_dict = {}
             host_dict[host.ip_address] = host
-            update_json_file(host_dict, json_file)
+            update_json_file(host_dict, json_file, file_semaphore)
             # IP acquisition successfull
             return True
+        
         elif response_type == "NAK":
             
-            write_to_log(f"DHCP NAK received: {host.mac_address} failed to renew {host.ip_address}")
             # If NAK is received, renew failed and that IP address is no longer spoofed
-            # Remove that host from JSON file
+            write_to_log(f"DHCP NAK received: {host.mac_address} failed to renew {host.ip_address}")
+            # Remove that host from JSON file or put it's is_spoofed flag to False
+            try:
+                hosts_dict = load_from_json(hosts_file, file_semaphore)
+            except Exception as e:
+                write_to_log(f"Error loading JSON file: {str(e)}")
+                pass
+            # Remove that IP from dictionary
+            hosts_dict.pop(host.ip_address)
+            # Save modified dictionary to JSON file
+            try:
+                save_to_json(hosts_dict, hosts_file, file_semaphore)
+            except Exception as e:
+                write_to_log(f"{str(e)}")
 
-                 
         else:
             write_to_log(f"Unknown DHCP response received: DHCP.MessageType = {dhcp_request_packet[scapy.DHCP].options[0][1]}")
             return
@@ -226,10 +179,6 @@ def main():
             host.transaction_id = random.getrandbits(32)
             # Unicast DHCP Request to renew IP address lease
             send_renewal_request(host, dhcp_server_ip, dhcp_server_mac)
-
-
-
-
 
     write_to_log(f"Service Terminated")
     

@@ -6,11 +6,11 @@
 
 #### IMPORTS #### -------------------------------------------------------------------
 import scapy.all as scapy
-#import time
 import json
 import threading
 import subprocess
 from pathlib import Path
+from itertools import zip_longest
 from common import *
 from utils import setup_logging, write_to_log, file_semaphore
 
@@ -21,35 +21,11 @@ timeout_to_receive_dhcp_response = 30 # seconds
 time_to_wait_between_release_and_discover = 10 # seconds
 base_dir = Path(__file__).resolve().parent
 log_file = base_dir / "logs" / "dhcp_spoof.log"
-#log_file = "logs/dhcp_spoof.log"
-
 
 setup_logging(log_file)
 
 
 #### FUNCTIONS #### ----------------------------------------------------------------
-
-def update_json_file(updated_ip_dict, file_path):
-        """
-        Update json file with new information.
-        Load specified file into a dictionary, adds new entries and save it to JSON file.
-        """
-        try:
-            # Load previous results from JSON file
-            dict_on_file = load_from_json(file_path, file_semaphore)
-
-            # Update previous results with new hosts' information
-            for ip, host in updated_ip_dict.items():
-                dict_on_file[ip] = host
-            # Save updated results back to the JSON file
-            save_to_json(dict_on_file, file_path, file_semaphore)
-        except FileNotFoundError as e:
-            write_to_log(str(e))
-        except json.JSONDecodeError as e:
-            write_to_log(f"Error decoding JSON file: {str(e)}")
-        except Exception as e:
-            write_to_log(f"An unexpected error occurred: {str(e)}")
-
         
 def get_unspoofed_ips(network_ip_addresses, spoofed_ip_dict):
     """
@@ -173,7 +149,7 @@ def perform_dhcp_request_ack(host, timeout):
             write_to_log(f"ACK received: {host.mac_address} successfully linked to {host.ip_address}")
             host_dict = {}
             host_dict[host.ip_address] = host
-            update_json_file(host_dict, json_file)
+            update_json_file(host_dict, json_file, file_semaphore)
             # IP acquisition successfull
             return True
         elif response_type == "NAK":
@@ -208,10 +184,16 @@ def arp_scan(target_ips):
     Performs a targeted ARP request scan to find existing hosts on the network.
     Returns a list with hosts' (IP, MAC) tuples who have answered, except the router
     """
+
+    write_to_log(f"ARP Discover: Sending an ARP Request for the following IP addresses:")
+    grouped_ips = zip_longest(*[iter(target_ips)] * 4, fillvalue='')
+    for ips in grouped_ips:
+        write_to_log(f"{ips}")
+
     # ARP Request packet, one for every unspoofed ip address
     arp_requests = [scapy.Ether(dst="ff:ff:ff:ff:ff:ff") / scapy.ARP(pdst=ip) for ip in target_ips]
     # Send it and catch ARP Reply response(s)
-    result, _ = scapy.srp(arp_requests, timeout=timeout_to_receive_arp_reply, verbose=False)
+    result, _ = scapy.srp(arp_requests, timeout=timeout_to_receive_arp_reply, verbose=True)
 
     # List to save hosts' (IP, MAC) tuples who have answered
     responsive_devices = []
@@ -230,7 +212,7 @@ def arp_scan(target_ips):
         is_router = check_if_router(ip)
         if is_router:
             # Updating known router JSON file
-            write_to_log(f"Found router/DHCP server - MAC:{mac}, IP:{ip}")
+            #write_to_log(f"Found router/DHCP server - MAC:{mac}, IP:{ip}")
             # Read previous results 
             try:
                 with file_semaphore:
@@ -267,21 +249,6 @@ def arp_scan(target_ips):
             except Exception as e:
                 write_to_log(f"Error saving JSON file: {e}")
 
-
-            '''
-            # Save that "new" host to dictionary
-            router = fake_host.create_host(ip)
-            router.mac_address = mac
-            router.acquisition_time = datetime.now()
-            router.lease_time = 999999
-            # It's not really spoofed but this will avoid spoofing attemps 
-            router.is_spoofed = True
-            router.is_server = True
-            router.hostname = "Router"
-            aux_dict = {}
-            aux_dict[ip] = router
-            update_json_file(aux_dict, json_file)
-            '''
             # Removing router from responsive devices list
             responsive_devices.remove((ip,mac))
             break
@@ -379,32 +346,35 @@ def main():
     # Load previous spoofed hosts from json file
     spoofed_ip_dict = load_from_json(json_file, file_semaphore)
 
+    # Getting Pi-hole DHCP Server's IP lease list
+    spoofed_hosts = get_dhcp_leases()
+
+    # Print existing host in Pihole's lease list
+    if spoofed_hosts:
+        write_to_log(f"Existing and spoofed devices:")
+        for mac, info in spoofed_hosts.items():
+            write_to_log(f"MAC: {mac}, IP: {info['ip_address']}, Hostname: {info['hostname']}")
+
     # Get a list with non spoofed host's IP addresses checking spoofed_ip_dict
     target_ips = get_unspoofed_ips(network_ip_addresses, spoofed_ip_dict)
 
     # Perform an ARP scan
     ip_mac_data = arp_scan(target_ips)
 
-    # Getting Pi-hole DHCP Server's IP lease list
-    spoofed_hosts = get_dhcp_leases()
-
     # Update known hosts JSON file
     update_found_devices_json(ip_mac_data, spoofed_hosts)
-
-    if spoofed_hosts:
-        write_to_log(f"Existing and spoofed devices:")
-        for mac, info in spoofed_hosts.items():
-            write_to_log(f"MAC: {mac}, IP: {info['ip_address']}, Hostname: {info['hostname']}")
 
     # Prints found devices on network
     if ip_mac_data:
         write_to_log(f"Found connected and unspoofed device(s):")
         for ip, mac in ip_mac_data:
-            write_to_log(f"MAC:{mac} - IP:{ip}")
-        
-        
+            if mac == dhcp_server_mac:
+                write_to_log(f"MAC:{mac} - IP:{ip} - DHCP Server")
+            else:
+                write_to_log(f"MAC:{mac} - IP:{ip}")
+
     else:
-        write_to_log(f"No other devices found")
+        write_to_log(f"ARP Discover concluded with no response")
         write_to_log(f"Service Terminated")
         exit()
   
@@ -413,10 +383,11 @@ def main():
     capture_thread.daemon = True
     capture_thread.start()
 
+    #write_to_log(f"Starting Release&Catch for all found devices")
     for ip, mac in ip_mac_data:
-        # Checking if discovered host is not already spoofed nor router/DHCP Server
-        #if mac not in spoofed_hosts.keys() and ip != dhcp_server_ip:
+
         # Try to release that host IP address and kidnap it
+        write_to_log(f"Trying to spoof device: {ip} - {mac}")
         release_and_catch(mac, ip)
     
     write_to_log(f"Service Terminated")

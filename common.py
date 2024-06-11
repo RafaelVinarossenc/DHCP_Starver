@@ -125,10 +125,19 @@ def load_from_json(file_path, semaphore):
         return file_dict
 
     except FileNotFoundError as e:
+        with semaphore:
+            with open(file_path, 'w') as file:
+                json.dump({}, file)
         raise FileNotFoundError(f"File not found: {file_path}") from e
     except json.JSONDecodeError as e:
+        with semaphore:
+            with open(file_path, 'w') as file:
+                json.dump({}, file)
         raise json.JSONDecodeError(f"Error decoding JSON file: {e}", e.doc, e.pos)
     except Exception as e:
+        with semaphore:
+            with open(file_path, 'w') as file:
+                json.dump({}, file)
         raise Exception(f"Unknown error during file read: {e}") from e
 
 
@@ -156,6 +165,28 @@ def save_to_json(results, file_path, semaphore):
                 json.dump(sorted_dict, file, indent=4)
     except Exception as e:
         raise Exception(f"Error saving JSON file: {e}") from e
+
+
+def update_json_file(updated_ip_dict, file_path, semaphore):
+    """
+    Update json file with new information.
+    Load specified file into a dictionary, adds new entries and save it to JSON file.
+    """
+    try:
+        # Load previous results from JSON file
+        dict_on_file = load_from_json(file_path, semaphore)
+
+        # Update previous results with new hosts' information
+        for ip, host in updated_ip_dict.items():
+            dict_on_file[ip] = host
+        # Save updated results back to the JSON file
+        save_to_json(dict_on_file, file_path, semaphore)
+    except FileNotFoundError as e:
+        write_to_log(str(e))
+    except json.JSONDecodeError as e:
+        write_to_log(f"Error decoding JSON file: {str(e)}")
+    except Exception as e:
+        write_to_log(f"An unexpected error occurred: {str(e)}")
 
 
 def get_network_params(iface_name):

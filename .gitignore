@@ -3,5 +3,4 @@ inspiracion/
 logs/
 old_spoof/
 python_venv/
-release_all_spoofed_hosts.py
 send_custom_dhcp_packet.py

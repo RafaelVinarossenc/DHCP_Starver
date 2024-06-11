@@ -1,22 +1,7 @@
 {
-    "60:e3:27:4f:ca:64": {
-        "original_ip_address": "192.168.2.27",
-        "mac_address": "60:e3:27:4f:ca:64",
-        "last_seen": "2024-06-11 11:10:07"
-    },
-    "98:54:1b:c6:05:e8": {
-        "actual_ip_address": "192.168.255.12",
-        "mac_address": "98:54:1b:c6:05:e8",
-        "hostname": "DESKTOP-RIPBP9I"
-    },
-    "7e:b6:14:99:ed:2d": {
-        "actual_ip_address": "192.168.255.143",
-        "mac_address": "7e:b6:14:99:ed:2d",
-        "hostname": "Nokia-Ladrillo"
-    },
-    "d8:3a:dd:80:f6:5d": {
-        "original_ip_address": "192.168.2.250",
-        "mac_address": "d8:3a:dd:80:f6:5d",
-        "last_seen": "2024-06-11 11:10:07"
+    "9e:94:11:8d:29:a9": {
+        "original_ip_address": "192.168.1.119",
+        "mac_address": "9e:94:11:8d:29:a9",
+        "last_seen": "2024-06-11 22:14:23"
     }
 }
