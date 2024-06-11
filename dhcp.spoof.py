@@ -59,12 +59,13 @@ def get_unspoofed_ips(network_ip_addresses, spoofed_ip_dict):
         # Iterating for every fake_host in the dictionary
         for ip, host in spoofed_ip_dict.items():
             
+            '''
             # Check if host is DHCP server
             if host.is_server:
                 global dhcp_server_ip, dhcp_server_mac
                 dhcp_server_ip = ip
                 dhcp_server_mac = host.mac_address
-            
+            '''
             # Check if host is spoofed
             if host.is_spoofed:
                 # Remove IP address from all IP addresses list
@@ -87,7 +88,7 @@ def release_and_catch(existing_host_mac, existing_host_ip):
     host = fake_host.create_host()
 
     # Perform a DORA handshake to catch new released IP address
-    acquisition_successfull = perform_dhcp_discover_offer(host)
+    acquisition_successfull = perform_dhcp_discover_offer(host, timeout_to_receive_dhcp_response)
 
     # If IP acquisition is successfull, send 3 ARP Request announcing that "new" host to the rest of the network
     if acquisition_successfull:
@@ -95,7 +96,7 @@ def release_and_catch(existing_host_mac, existing_host_ip):
         send_gratuitous_arp(host.mac_address, host.ip_address)
 
 
-def perform_dhcp_discover_offer(host):
+def perform_dhcp_discover_offer(host, timeout):
     """
     Perform a DHCP Discover-Offer transaction. 
     If a DHCP Offer is received, continues with Request-ACK
@@ -109,7 +110,7 @@ def perform_dhcp_discover_offer(host):
     write_to_log(f"DHCP Discover sent: {host.mac_address} requesting a new IP address")
 
     # Waits until timeout or DHCP Response is received
-    dhcp_discover_response = process_dhcp_packet(dhcp_discover_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
+    dhcp_discover_response = process_dhcp_packet(dhcp_discover_packet[scapy.BOOTP].xid, timeout)
 
     if dhcp_discover_response:
 
@@ -122,7 +123,7 @@ def perform_dhcp_discover_offer(host):
             #print(f"Offer received")
             write_to_log(f"DHCP Offer received: {host.mac_address} offered {host.ip_address}")
             # Return True if ip acquisition is successful
-            return perform_dhcp_request_ack(host)
+            return perform_dhcp_request_ack(host, timeout)
 
         elif response_type == "ACK":
 
@@ -146,19 +147,19 @@ def perform_dhcp_discover_offer(host):
         return
     
 
-def perform_dhcp_request_ack(host):
+def perform_dhcp_request_ack(host, timeout):
     """
     Completes the DHCP handshake process after receiving a DHCP Offer
     """
 
     # If Discover-Offer occurs, continue with DORA handshake
-    dhcp_request_packet = create_broadcast_dhcp_request_packet(host)
+    dhcp_request_packet = create_broadcast_dhcp_request_packet(host, dhcp_server_ip)
     # Send DHCP Request
     scapy.sendp(dhcp_request_packet, verbose=False, iface=iface)
     write_to_log(f"DHCP Request sent: {host.mac_address} requesting {host.ip_address}")
 
     # Waits until timeout or DHCP Response is received
-    dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
+    dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout)
 
     # If there's response
     if dhcp_request_response:
@@ -228,10 +229,46 @@ def arp_scan(target_ips):
     for (ip, mac) in responsive_devices:
         is_router = check_if_router(ip)
         if is_router:
+            # Updating known router JSON file
             write_to_log(f"Found router/DHCP server - MAC:{mac}, IP:{ip}")
+            # Read previous results 
+            try:
+                with file_semaphore:
+                    with open(router_file, 'r') as file:
+                        data = json.load(file)
+                
+                dhcp_server_dict = {ip: dhcp_server.from_dict(host_data) for ip, host_data in data.items()}
+
+            except FileNotFoundError as e:
+                write_to_log(f"File not found: {router_file}")
+                dhcp_server_dict = {}
+            except json.JSONDecodeError as e:
+                write_to_log(f"Error decoding JSON file: {e}")
+                dhcp_server_dict = {}
+            except Exception as e:
+                write_to_log(f"Unknown error during file read: {e}")
+                dhcp_server_dict = {}
+
+            # Update server information
+            router = dhcp_server.create_server(ip, mac)
+            dhcp_server_dict[ip] = router
+
             global dhcp_server_ip, dhcp_server_mac
             dhcp_server_ip = ip
             dhcp_server_mac = mac
+
+            # Save new dhcp server information to JSON file
+            serializable_dict = {ip: host.to_dict() for ip, host in dhcp_server_dict.items()}
+
+            try:
+                with file_semaphore:
+                    with open(router_file, 'w') as file:
+                        json.dump(serializable_dict, file, indent=4)
+            except Exception as e:
+                write_to_log(f"Error saving JSON file: {e}")
+
+
+            '''
             # Save that "new" host to dictionary
             router = fake_host.create_host(ip)
             router.mac_address = mac
@@ -244,6 +281,7 @@ def arp_scan(target_ips):
             aux_dict = {}
             aux_dict[ip] = router
             update_json_file(aux_dict, json_file)
+            '''
             # Removing router from responsive devices list
             responsive_devices.remove((ip,mac))
             break
@@ -284,6 +322,51 @@ def check_if_router(ip_address):
         return False
     
 
+def update_found_devices_json(ip_mac_of_found_devices, spoofed_hosts):
+    """
+    Check and update known host JSON file with found devices
+    """
+
+    combined_dict = {}
+    # Adding found devices information
+    for ip, mac in ip_mac_of_found_devices:
+        combined_dict[mac] = {"original_ip_address": ip, 
+                              "mac_address": mac, 
+                              "last_seen": datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+
+    # Adding spoofed devices information
+    for mac, data in spoofed_hosts.items():
+        combined_dict[mac] = {"actual_ip_address": data["ip_address"], 
+                              "mac_address": mac,
+                              "hostname": data["hostname"]}
+
+    # Read known hosts JSON file
+    try:
+        with file_semaphore:
+            with open(hosts_file, 'r') as file:
+                file_dict = json.load(file)
+        
+    except FileNotFoundError as e:
+        write_to_log(f"File not found: {hosts_file}")
+        file_dict = {}
+    except json.JSONDecodeError as e:
+        write_to_log(f"Error decoding JSON file: {e}")
+        file_dict = {}
+    except Exception as e:
+        write_to_log(f"Unknown error during file read: {e}")
+        file_dict = {}
+
+    file_dict.update(combined_dict)
+
+    # Save combined  dictionary to JSON file
+    try:
+        with file_semaphore:
+            with open(hosts_file, 'w') as file:
+                json.dump(file_dict, file, indent=4)
+    except Exception as e:
+        raise Exception(f"Error saving JSON file: {e}") from e
+
+
 def main():
     
     write_to_log(f"Starting DHCP spoofing process")
@@ -305,6 +388,9 @@ def main():
     # Getting Pi-hole DHCP Server's IP lease list
     spoofed_hosts = get_dhcp_leases()
 
+    # Update known hosts JSON file
+    update_found_devices_json(ip_mac_data, spoofed_hosts)
+
     if spoofed_hosts:
         write_to_log(f"Existing and spoofed devices:")
         for mac, info in spoofed_hosts.items():
@@ -315,6 +401,8 @@ def main():
         write_to_log(f"Found connected and unspoofed device(s):")
         for ip, mac in ip_mac_data:
             write_to_log(f"MAC:{mac} - IP:{ip}")
+        
+        
     else:
         write_to_log(f"No other devices found")
         write_to_log(f"Service Terminated")

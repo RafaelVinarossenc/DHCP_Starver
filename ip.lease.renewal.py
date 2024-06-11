@@ -84,7 +84,8 @@ def is_ip_renew_needed(lease_time, acquisition_time):
     """
     # Sometimes lease time/acquisition_time are not correctly assigned to host. idk
     try:
-        threshold = 0.5 * lease_time
+        # Substracting 30 seconds to threshold to compensate delay between first and last IP address renewal
+        threshold = 0.5 * lease_time - 30
         time_diff = datetime.now() - acquisition_time
     except TypeError:
         # Forcing IP renew
@@ -166,15 +167,32 @@ def create_unicast_dhcp_request_packet(host, dst_ip, dst_mac):
     return dhcp_request
 
 
-def find_dhcp_server(host_dict):
+def find_dhcp_server():
     """
-    Check and find DHCP server betweeen all host in host_dict dictionary
+    Check and find DHCP server on known router JSON file
     """
-    for host in host_dict.values():
-        if host.is_server:
-            return host.ip_address, host.mac_address
-    return None, None
+    try:
+        with file_semaphore:
+            with open(router_file, 'r') as file:
+                data = json.load(file)
+        
+        dhcp_server_dict = {ip: dhcp_server.from_dict(host_data) for ip, host_data in data.items()}
 
+    except FileNotFoundError as e:
+        write_to_log(f"File not found: {router_file}")
+        dhcp_server_dict = {}
+    except json.JSONDecodeError as e:
+        write_to_log(f"Error decoding JSON file: {e}")
+        dhcp_server_dict = {}
+    except Exception as e:
+        write_to_log(f"Unknown error during file read: {e}")
+        dhcp_server_dict = {}
+
+    for server_data in dhcp_server_dict.values():
+
+        return server_data.ip_address, server_data.mac_address
+    
+    return None, None
 
 
 def main():
@@ -194,7 +212,7 @@ def main():
         write_to_log(f"An unexpected error occurred: {str(e)}")
         host_dict = {}
     
-    dhcp_server_ip, dhcp_server_mac = find_dhcp_server(host_dict)
+    dhcp_server_ip, dhcp_server_mac = find_dhcp_server()
 
     # Start response DHCP packet capture thread
     capture_thread = threading.Thread(target=capture_dhcp_packets, args=(captured_packets, iface))
@@ -203,7 +221,7 @@ def main():
 
     # For every host on dict decides if a new DHCP Request is needed to keep IP address linked to host
     for host in host_dict.values():
-        if is_ip_renew_needed(host.lease_time, host.acquisition_time) and host.is_spoofed and not host.is_server:
+        if is_ip_renew_needed(host.lease_time, host.acquisition_time) and host.is_spoofed:
             # Resetting Transaction ID
             host.transaction_id = random.getrandbits(32)
             # Unicast DHCP Request to renew IP address lease

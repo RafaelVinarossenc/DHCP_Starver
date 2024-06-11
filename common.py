@@ -11,8 +11,11 @@ import time
 from pathlib import Path
 import utils
 from utils import write_to_log
+
 base_dir = Path(__file__).resolve().parent
-json_file = base_dir / "spoofed_hosts.json"
+json_file = base_dir / "bogus_hosts.json"
+router_file = base_dir / "known_router.json"
+hosts_file = base_dir / "known_hosts.json"
 
 
 #### GLOBAL VARIABLES #### ---------------------------------------------------------
@@ -46,7 +49,7 @@ class fake_host:
         self.lease_time = None  # IP Address Lease Time offered by DHCP Server
         self.acquisition_time = None  # Time when IP Address was obtained/renewed
         self.is_spoofed = False  # Sets if this host has acquired successfully the IP Address
-        self.is_server = False # True when this IP address if from DHCP server's network
+        #self.is_server = False # True when this IP address if from DHCP server's network
 
     def to_dict(self):
         return {
@@ -56,8 +59,8 @@ class fake_host:
             "hostname" : self.hostname,
             "lease_time" : self.lease_time,
             "acquisition_time" : self.acquisition_time.strftime("%Y-%m-%d %H:%M:%S"),
-            "is_spoofed" : self.is_spoofed,
-            "is_server" : self.is_server
+            "is_spoofed" : self.is_spoofed
+            #"is_server" : self.is_server
         }
     
     @classmethod
@@ -67,7 +70,7 @@ class fake_host:
         instance.lease_time = data["lease_time"]
         instance.acquisition_time = datetime.strptime(data["acquisition_time"], "%Y-%m-%d %H:%M:%S")
         instance.is_spoofed = data["is_spoofed"]
-        instance.is_server = data["is_server"]
+        #instance.is_server = data["is_server"]
         return instance
     
     @classmethod
@@ -76,6 +79,35 @@ class fake_host:
         mac_address = utils.get_random_mac()
         return cls(mac_address, trans_id, ip_address)
 
+
+class dhcp_server:
+    """
+    Defines basic parameters of a DHCP server
+    """
+    def __init__(self, ip_address, mac_address, last_seen=None):
+        self.ip_address = ip_address
+        self.mac_address = mac_address
+        self.last_seen = last_seen or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    def to_dict(self):
+        return {
+            "ip_address": self.ip_address,
+            "mac_address": self.mac_address,
+            "last_seen": self.last_seen
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        instance = cls(
+            ip_address=data["ip_address"],
+            mac_address=data["mac_address"],
+            last_seen=data["last_seen"]
+        )
+        return instance
+    
+    @classmethod
+    def create_server(cls, ip_address, mac_address):
+        return cls(ip_address, mac_address)
 
 
 #### COMMON FUNCTIONS #### --------------------------------------------------------
@@ -161,7 +193,7 @@ def mac_to_str(bytes_value):
     return formatted_mac_address
 
 
-def create_broadcast_dhcp_request_packet(host):
+def create_broadcast_dhcp_request_packet(host, server_id):
     """
     Creates a broadcast DHCP Discover with host's parameters
     """
@@ -176,10 +208,12 @@ def create_broadcast_dhcp_request_packet(host):
     udp_header = scapy.UDP(sport=68, 
                            dport=67)
     bootp_field = scapy.BOOTP(chaddr=mac_address, 
+                              yiaddr=host.ip_address,
                               xid=trans_id,
                               flags=0)
     dhcp_field = scapy.DHCP(options=[("message-type", "request"),
                                      ("client_id", b'\x01' + mac_address),
+                                     ("server_id", server_id),
                                      ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),
                                      ("requested_addr", host.ip_address), 
                                      ("hostname", host.hostname),
@@ -330,10 +364,11 @@ def process_dhcp_packet(transaction_id, timeout):
                 
                 # If an foreign ACK is received, it's interesting to know who gets what ip address
                 elif pkt[scapy.DHCP].options[0][1] == 5:
-
+                    '''
                     host_mac = mac_to_str(pkt[scapy.BOOTP].chaddr)
                     host_ip = pkt[scapy.BOOTP].yiaddr
                     write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
+                    '''
                     captured_packets.remove(pkt)
             
         time.sleep(0.25)
