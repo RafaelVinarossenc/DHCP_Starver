@@ -275,6 +275,7 @@ def create_dhcp_discover_packet(host):
                                      ("client_id", b'\x01' + host_mac),
                                      ('param_req_list', [53, 54, 51, 1, 6, 3, 50]),  
                                      ("hostname", host.hostname), 
+                                     80,
                                      "end"])
     dhcp_discover = (ether_header/ip_header/udp_header/bootp_field/dhcp_field)
 

@@ -276,8 +276,13 @@ def perform_dhcp_discover_offer(host, timeout):
 
         elif response_type == "ACK":
 
-            # ACK in this stage is not expected, but just in case 
+            # ACK in this stage is expected if Rapid Commit is enabled on router. 
             write_to_log(f"ACK received: {host.mac_address} successfully linked to {host.ip_address}")
+            host_dict = {}
+            host_dict[host.ip_address] = host
+            update_json_file(host_dict, json_file, file_semaphore)
+            # IP acquisition successfull
+            return True
 
         elif response_type == "NAK":
 
