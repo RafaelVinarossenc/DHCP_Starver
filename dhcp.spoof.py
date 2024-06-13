@@ -104,7 +104,7 @@ def perform_dhcp_discover_offer(host, timeout):
         elif response_type == "ACK":
 
             # ACK in this stage is expected if Rapid Commit is enabled on router. 
-            write_to_log(f"ACK received: {host.mac_address} successfully linked to {host.ip_address}")
+            write_to_log(f"DHCP ACK received: {host.mac_address} successfully linked to {host.ip_address}")
             host_dict = {}
             host_dict[host.ip_address] = host
             update_json_file(host_dict, json_file, file_semaphore)
@@ -152,7 +152,7 @@ def perform_dhcp_request_ack(host, timeout):
 
         if response_type == "ACK":
             # DORA handshake completed, saving new host to json file
-            write_to_log(f"ACK received: {host.mac_address} successfully linked to {host.ip_address}")
+            write_to_log(f"DHCP ACK received: {host.mac_address} successfully linked to {host.ip_address}")
             host_dict = {}
             host_dict[host.ip_address] = host
             update_json_file(host_dict, json_file, file_semaphore)

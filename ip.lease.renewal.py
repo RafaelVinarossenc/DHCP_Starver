@@ -62,7 +62,7 @@ def send_renewal_request(host, dhcp_server_ip, dhcp_server_mac):
 
         if response_type == "ACK":
             # DORA handshake completed, saving new host to json file
-            write_to_log(f"ACK received: {host.mac_address} successfully renewed to {host.ip_address}")
+            write_to_log(f"DHCP ACK received: {host.mac_address} successfully renewed to {host.ip_address}")
             host_dict = {}
             host_dict[host.ip_address] = host
             update_json_file(host_dict, json_file, file_semaphore)
