@@ -66,56 +66,23 @@ TOOLS=("python3" "python3-dev" "net-tools" "iptables")
 
 for tool in "${TOOLS[@]}"; do
     print_color "$YELLOW" "Checking if $tool is installed..."
-    case $tool in
-        "python3")
-            if command -v python3 &>/dev/null; then
-                print_color "$GREEN" "$tool is already installed."
-            else
-                print_color "$RED" "$tool not installed, installing it now..."
-                sudo apt-get update
-                sudo apt-get install -y python3
-                # Verificar si la instalación fue exitosa
-                if command -v python3 &>/dev/null; then
-                    print_color "$GREEN" "$tool successfully installed."
-                else
-                    print_color "$RED" "Problem during $tool installation. Install it manually and try again."
-                    remove_and_terminate
-                fi
+    if command -v $tool &>/dev/null; then
+        print_color "$GREEN" "$tool is already installed."
+    else
+        print_color "$RED" "$tool not installed, installing it now..."
+        sudo apt-get update
+        sudo apt-get install -y $tool
+        # Verificar si la instalación fue exitosa
+        if command -v $tool &>/dev/null; then
+            print_color "$GREEN" "$tool successfully installed."
+        else
+            print_color "$RED" "Problem during $tool installation."
+            read -rp "If this is an error, you can continue normally. Continue with script execution? [y/N]: " continue_installation
+            if [[ ! $continue_installation =~ ^[Yy]$ ]]; then
+                remove_and_terminate
             fi
-            ;;
-        "python3-dev")
-            if dpkg -s python3-dev &>/dev/null; then
-                print_color "$GREEN" "$tool is already installed."
-            else
-                print_color "$RED" "$tool not installed, installing it now..."
-                sudo apt-get update
-                sudo apt-get install -y python3-dev
-                # Verificar si la instalación fue exitosa
-                if dpkg -s python3-dev &>/dev/null; then
-                    print_color "$GREEN" "$tool successfully installed."
-                else
-                    print_color "$RED" "Problem during $tool installation. Install it manually and try again."
-                    remove_and_terminate
-                fi
-            fi
-            ;;
-        *)
-            if command -v $tool &>/dev/null; then
-                print_color "$GREEN" "$tool is already installed."
-            else
-                print_color "$RED" "$tool not installed, installing it now..."
-                sudo apt-get update
-                sudo apt-get install -y $tool
-                # Verificar si la instalación fue exitosa
-                if command -v $tool &>/dev/null; then
-                    print_color "$GREEN" "$tool successfully installed."
-                else
-                    print_color "$RED" "Problem during $tool installation. Install it manually and try again."
-                    remove_and_terminate
-                fi
-            fi
-            ;;
-    esac
+        fi
+    fi
 done
 
 
