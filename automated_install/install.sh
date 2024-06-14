@@ -21,6 +21,24 @@ remove_and_terminate() {
     exit 1
 }
 
+# Function to check if Linux package is installed
+is_installed() {
+    local tool=$1
+    if [[ "$tool" == "net-tools" ]]; then
+        command -v ifconfig &>/dev/null
+    else
+        ! apt-cache policy $tool | grep -q "Installed: (none)"
+    fi
+}
+
+# Function to add unique crontab entries avoiding duplicates
+add_crontab_entry() {
+    local entry="$1"
+    local current_crontab=$(crontab -l 2>/dev/null)
+    if ! echo "$current_crontab" | grep -Fq "$entry"; then
+        (crontab -l 2>/dev/null; echo "$entry") | crontab -
+    fi
+}
 
 # Main Script -----------------------------------------------------
 # Check if script is running as root ------------------------------
@@ -66,14 +84,16 @@ TOOLS=("python3" "python3-dev" "net-tools" "iptables")
 
 for tool in "${TOOLS[@]}"; do
     print_color "$YELLOW" "Checking if $tool is installed..."
-    if command -v $tool &>/dev/null; then
+
+    if is_installed $tool; then
         print_color "$GREEN" "$tool is already installed."
     else
         print_color "$RED" "$tool not installed, installing it now..."
         sudo apt-get update
         sudo apt-get install -y $tool
-        # Verificar si la instalación fue exitosa
-        if command -v $tool &>/dev/null; then
+
+        # Check if installation was successfull
+        if is_installed $tool; then
             print_color "$GREEN" "$tool successfully installed."
         else
             print_color "$RED" "Problem during $tool installation."
@@ -88,7 +108,7 @@ done
 
 # Create python virtual environment ---------------------------------------------
 print_color "$YELLOW" "Setting permissions to $DHCP_STARVER_DIR/ and creating Python virtual environment."
-mkdir -p $DHCP_STARVER_DIR/python_env
+mkdir -p $DHCP_STARVER_DIR/python_venv
 chmod -R u+wx,g+wx,o+wx $DHCP_STARVER_DIR/
 python3 -m venv $DHCP_STARVER_DIR/python_venv 
 
@@ -200,7 +220,7 @@ pihole -a -p
 # Setting up Pi-Hole's DHCP Server
 #pihole -a enabledhcp "RANGE START IP" "RANGE END IP" "GATEWAY IP" "LEASE TIME(hours)" "DOMAIN"
 print_color "$YELLOW" "Enabling DHCP Server..."
-pihole -a enabledhcp "192.168.255.10" "192.168.2.200" "192.168.255.1" "24" "pi-local"
+pihole -a enabledhcp "192.168.255.10" "192.168.255.200" "192.168.255.1" "24" "pi-local"
 
 # Config completed
 IP_ADDRESS=$(hostname -I | awk '{print $1}')
@@ -212,6 +232,10 @@ print_color "$YELLOW" "Creating startup configuration file on $DHCP_STARVER_DIR/
 startup_script="$DHCP_STARVER_DIR/startup_config.sh"
 bash -c "cat > $startup_script" <<EOL
 #!/bin/bash
+
+export PATH=$PATH:/usr/local/bin:/usr/bin:/bin
+
+echo "startup_script.sh executed at $(date)" >> /home/pi/dhcp_starver/startup.log
 
 INTERFACE="$selected_interface"
 
@@ -230,6 +254,9 @@ iptables -t nat -A POSTROUTING -o "\$INTERFACE" -j MASQUERADE
 # Removing Pi-Hole DHCP server's IP lease
 rm -f /etc/pihole/dhcp.leases
 pihole restartdns
+
+# Make sure Pi-Hole's DHCP Server is set-up correctly
+pihole -a enabledhcp "192.168.255.10" "192.168.255.200" "192.168.255.1" "24" "pi-local"
 EOL
 
 chmod +x $startup_script
@@ -241,22 +268,38 @@ echo " "
 # Adding Crontab entries ------------------------------------------------------------
 print_color "$YELLOW" "Adding Crontab entries..."
 
-(crontab -l ; echo "# Run startup configuration on reboot") | crontab -
-(crontab -l ; echo "@reboot bash $network_script") | crontab -
+#(crontab -l ; echo "# Run startup configuration on reboot") | crontab -
+#(crontab -l ; echo "@reboot $network_script") | crontab -
 
-(crontab -l ; echo "# Execute pool.exhaustion.py on reboot with 60 seconds of delay and once every hour") | crontab -
-(crontab -l 2>/dev/null; echo "@reboot sleep 60 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py") | crontab -
-(crontab -l 2>/dev/null; echo "0 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py") | crontab -
+#(crontab -l ; echo "# Execute pool.exhaustion.py on reboot with 60 seconds of delay and once every hour") | crontab -
+#(crontab -l 2>/dev/null; echo "@reboot sleep 60 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py") | crontab -
+#(crontab -l 2>/dev/null; echo "0 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py") | crontab -
 
-(crontab -l ; echo "# Execute dhcp.spoof.py on reboot with 180 seconds of delay and once every 10 minutes") | crontab -
-(crontab -l 2>/dev/null; echo "@reboot sleep 180 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py") | crontab -
-(crontab -l 2>/dev/null; echo "*/10 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py") | crontab -
+#(crontab -l ; echo "# Execute dhcp.spoof.py on reboot with 180 seconds of delay and once every 10 minutes") | crontab -
+#(crontab -l 2>/dev/null; echo "@reboot sleep 180 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py") | crontab -
+#(crontab -l 2>/dev/null; echo "*/10 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py") | crontab -
 
-(crontab -l ; echo "# Execute ip.lease.renewal.py on reboot with 180 seconds of delay and once every minute") | crontab -
-(crontab -l 2>/dev/null; echo "@reboot sleep 270 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py") | crontab -
-(crontab -l 2>/dev/null; echo "*/1 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py") | crontab -
+#(crontab -l ; echo "# Execute ip.lease.renewal.py on reboot with 180 seconds of delay and once every minute") | crontab -
+#(crontab -l 2>/dev/null; echo "@reboot sleep 270 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py") | crontab -
+#(crontab -l 2>/dev/null; echo "*/1 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py") | crontab -
 
-print_color $GREEN "Current Crontab entries:"
+add_crontab_entry "# Run startup configuration on reboot"
+add_crontab_entry "@reboot sleep 30 && $startup_script"
+
+add_crontab_entry "# Execute pool.exhaustion.py on reboot with 60 seconds of delay and once every hour"
+add_crontab_entry "@reboot sleep 60 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py"
+add_crontab_entry "0 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py"
+
+add_crontab_entry "# Execute dhcp.spoof.py on reboot with 180 seconds of delay and once every 10 minutes"
+add_crontab_entry "@reboot sleep 180 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py"
+add_crontab_entry "*/10 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py"
+
+add_crontab_entry "# Execute ip.lease.renewal.py on reboot with 180 seconds of delay and once every minute"
+add_crontab_entry "@reboot sleep 270 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py"
+add_crontab_entry "*/1 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py"
+
+
+print_color $GREEN "Crontab entries added. Displaying current existing entries:"
 crontab -l
 
 echo " "

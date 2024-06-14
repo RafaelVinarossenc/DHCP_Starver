@@ -385,7 +385,7 @@ def main():
         exit()
   
     # Start response DHCP packet capture thread
-    capture_thread = threading.Thread(target=capture_dhcp_packets, args=(captured_packets, iface))
+    capture_thread = threading.Thread(target=capture_dhcp_packets, args=(captured_packets, our_ip_address, iface))
     capture_thread.daemon = True
     capture_thread.start()
 
