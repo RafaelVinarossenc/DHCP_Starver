@@ -12,15 +12,10 @@ from pathlib import Path
 import utils
 from utils import write_to_log
 
-base_dir = Path(__file__).resolve().parent
-json_file = base_dir / "bogus_hosts.json"
-router_file = base_dir / "known_router.json"
-hosts_file = base_dir / "known_hosts.json"
-
 
 #### GLOBAL VARIABLES #### ---------------------------------------------------------
 iface = "eth0"  # Network interface to spoof
-#json_file = "spoofed_hosts.json"
+
 # List to store captured DHCP packets
 captured_packets = []
 
@@ -34,6 +29,10 @@ our_mac_address = ""
 our_netmask = ""
 our_network = ""
 
+base_dir = Path(__file__).resolve().parent
+json_file = base_dir / "bogus_hosts.json"
+router_file = base_dir / "known_router.json"
+hosts_file = base_dir / "known_hosts.json"
 
 #### CLASSES #### ------------------------------------------------------
 class fake_host:
@@ -49,7 +48,6 @@ class fake_host:
         self.lease_time = None  # IP Address Lease Time offered by DHCP Server
         self.acquisition_time = None  # Time when IP Address was obtained/renewed
         self.is_spoofed = False  # Sets if this host has acquired successfully the IP Address
-        #self.is_server = False # True when this IP address if from DHCP server's network
 
     def to_dict(self):
         return {
@@ -60,7 +58,6 @@ class fake_host:
             "lease_time" : self.lease_time,
             "acquisition_time" : self.acquisition_time.strftime("%Y-%m-%d %H:%M:%S"),
             "is_spoofed" : self.is_spoofed
-            #"is_server" : self.is_server
         }
     
     @classmethod
@@ -70,7 +67,6 @@ class fake_host:
         instance.lease_time = data["lease_time"]
         instance.acquisition_time = datetime.strptime(data["acquisition_time"], "%Y-%m-%d %H:%M:%S")
         instance.is_spoofed = data["is_spoofed"]
-        #instance.is_server = data["is_server"]
         return instance
     
     @classmethod
@@ -341,7 +337,6 @@ def capture_dhcp_packets(packet_list, src_mac_to_avoid, interface):
             packet_list.append(pkt)
 
     scapy.sniff(iface=interface, filter="udp and dst port 68", prn=packet_handler, store=0)
-    #scapy.sniff(iface=interface, filter="udp and (port 67 or port 68)", prn=packet_handler, store=0)
 
 
 def handle_dhcp_response(packet, host):
@@ -397,11 +392,7 @@ def process_dhcp_packet(transaction_id, timeout):
                 
                 # If an foreign ACK is received, it's interesting to know who gets what ip address
                 elif pkt[scapy.DHCP].options[0][1] == 5:
-                    '''
-                    host_mac = mac_to_str(pkt[scapy.BOOTP].chaddr)
-                    host_ip = pkt[scapy.BOOTP].yiaddr
-                    write_to_log(f"Received unknown DHCP ACK: {host_ip} linked to {host_mac}")
-                    '''
+
                     captured_packets.remove(pkt)
             
         time.sleep(0.25)

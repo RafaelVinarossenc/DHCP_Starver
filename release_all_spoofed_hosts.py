@@ -1,7 +1,3 @@
-#import time
-#import scapy.all as scapy
-#import random
-#import threading
 from common import *
 from utils import file_semaphore
 
@@ -11,21 +7,18 @@ json_file = "/home/pi/dhcp_starver/bogus_hosts.json"
 #dhcp_server_ip = "192.168.1.25"
 #dhcp_server_mac = "30:B5:C2:51:01:13"
 
-# Define a semaphore for .log/.json file access without collision
-#file_semaphore = threading.Semaphore()
 
 def release_all_ips(host_dict):
     """
     Sends a DHCP Release for every fake host with an IP address linked
     """
     print(f"Releasing all spoofed IP addresses:")
-    #global spoofed_ip_dict
     for ip, host in host_dict.items():
-        #if host.is_spoofed:
         print(f"Releasing IP address {ip} from {host.mac_address}")
         send_release(host.mac_address, ip, 0.1, dhcp_server_ip, dhcp_server_mac, iface)
         # Updating spoofed host's dict
         host_dict[ip].is_spoofed = False
+        update_json_file(host_dict, hosts_file, file_semaphore)
 
     print(f"All IP addresses have been released!")
 

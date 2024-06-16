@@ -43,7 +43,8 @@ add_crontab_entry() {
 
 # Variables -------------------------------------------------------
 GITHUB_REPO_URL="https://github.com/RafaelVinarossenc/DHCP_Starver/archive/refs/heads/master.zip"
-LINUX_PACKAGES=("python3" "python3-dev" "net-tools" "iptables" "unzip" "realpath")
+LINUX_PACKAGES=("python3" "python3-dev" "net-tools" "iptables" "unzip")
+
 
 # Main Script -----------------------------------------------------
 # Check if script is running as root ------------------------------
@@ -80,7 +81,6 @@ done
 
 # Download and extraction -----------------------------------------
 print_color "$YELLOW" "Downloading tool from GitHub repository to dhcp_starver/"
-#wget https://github.com/RafaelVinarossenc/DHCP_Starver/archive/refs/heads/master.zip
 wget $GITHUB_REPO_URL -O master.zip
 unzip master.zip && rm master.zip
 mv DHCP_Starver-master/ dhcp_starver
@@ -108,9 +108,6 @@ for file in "${FILES[@]}"; do
         echo "{}" > "$FILE_PATH"
     fi
 done
-
-
-
 
 
 # Create python virtual environment ---------------------------------------------

@@ -34,18 +34,12 @@ def get_unspoofed_ips(network_ip_addresses, spoofed_ip_dict):
     try:
         # Iterating for every fake_host in the dictionary
         for ip, host in spoofed_ip_dict.items():
-            
-            '''
-            # Check if host is DHCP server
-            if host.is_server:
-                global dhcp_server_ip, dhcp_server_mac
-                dhcp_server_ip = ip
-                dhcp_server_mac = host.mac_address
-            '''
+
             # Check if host is spoofed
             if host.is_spoofed:
                 # Remove IP address from all IP addresses list
                 network_ip_addresses.remove(ip)
+
         return network_ip_addresses
     except:
         # If an error occurs, return the whole address list
@@ -96,7 +90,6 @@ def perform_dhcp_discover_offer(host, timeout):
 
         if response_type == "OFFER":
 
-            #print(f"Offer received")
             write_to_log(f"DHCP Offer received: {host.mac_address} offered {host.ip_address}")
             # Return True if ip acquisition is successful
             return perform_dhcp_request_ack(host, timeout)
@@ -217,8 +210,6 @@ def arp_scan(target_ips):
     for (ip, mac) in responsive_devices:
         is_router = check_if_router(ip)
         if is_router:
-            # Updating known router JSON file
-            #write_to_log(f"Found router/DHCP server - MAC:{mac}, IP:{ip}")
             # Read previous results 
             try:
                 with file_semaphore:
