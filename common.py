@@ -331,12 +331,13 @@ def get_dhcp_options(packet):
     return dhcp_opts_dict
 
 
-def capture_dhcp_packets(packet_list, src_addr_to_filter, interface):
+def capture_dhcp_packets(packet_list, src_mac_to_avoid, interface):
     """
-    Capture incoming DHCP packets and stores them in the `captured_packets` list
+    Capture incoming DHCP packets and stores them in the `captured_packets` list, ignoring
+    packet from a specific source MAC address
     """
     def packet_handler(pkt):
-        if pkt.haslayer(scapy.DHCP) and pkt[scapy.IP].src != src_addr_to_filter:
+        if pkt.haslayer(scapy.DHCP) and pkt[scapy.Ether].src.lower() != src_mac_to_avoid.lower():
             packet_list.append(pkt)
 
     scapy.sniff(iface=interface, filter="udp and dst port 68", prn=packet_handler, store=0)

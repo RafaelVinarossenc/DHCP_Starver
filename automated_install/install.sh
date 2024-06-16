@@ -40,6 +40,11 @@ add_crontab_entry() {
     fi
 }
 
+
+# Variables -------------------------------------------------------
+GITHUB_REPO_URL="https://github.com/RafaelVinarossenc/DHCP_Starver/archive/refs/heads/master.zip"
+LINUX_PACKAGES=("python3" "python3-dev" "net-tools" "iptables" "unzip" "realpath")
+
 # Main Script -----------------------------------------------------
 # Check if script is running as root ------------------------------
 if [ "$EUID" -ne 0 ]; then
@@ -48,9 +53,35 @@ if [ "$EUID" -ne 0 ]; then
 fi
 
 
+# Install required packeges if needed --------------------------------------
+for tool in "${LINUX_PACKAGES[@]}"; do
+    print_color "$YELLOW" "Checking if $tool is installed..."
+
+    if is_installed $tool; then
+        print_color "$GREEN" "$tool is already installed."
+    else
+        print_color "$RED" "$tool not installed, installing it now..."
+        sudo apt-get update
+        sudo apt-get install -y $tool
+
+        # Check if installation was successfull
+        if is_installed $tool; then
+            print_color "$GREEN" "$tool successfully installed."
+        else
+            print_color "$RED" "Problem during $tool installation."
+            read -rp "If this is an error, you can continue normally. Continue with script execution? [y/N]: " continue_installation
+            if [[ ! $continue_installation =~ ^[Yy]$ ]]; then
+                remove_and_terminate
+            fi
+        fi
+    fi
+done
+
+
 # Download and extraction -----------------------------------------
 print_color "$YELLOW" "Downloading tool from GitHub repository to dhcp_starver/"
-wget https://github.com/RafaelVinarossenc/DHCP_Starver/archive/refs/heads/master.zip
+#wget https://github.com/RafaelVinarossenc/DHCP_Starver/archive/refs/heads/master.zip
+wget $GITHUB_REPO_URL -O master.zip
 unzip master.zip && rm master.zip
 mv DHCP_Starver-master/ dhcp_starver
 
@@ -79,31 +110,7 @@ for file in "${FILES[@]}"; do
 done
 
 
-# Install required packeges if needed --------------------------------------
-TOOLS=("python3" "python3-dev" "net-tools" "iptables")
 
-for tool in "${TOOLS[@]}"; do
-    print_color "$YELLOW" "Checking if $tool is installed..."
-
-    if is_installed $tool; then
-        print_color "$GREEN" "$tool is already installed."
-    else
-        print_color "$RED" "$tool not installed, installing it now..."
-        sudo apt-get update
-        sudo apt-get install -y $tool
-
-        # Check if installation was successfull
-        if is_installed $tool; then
-            print_color "$GREEN" "$tool successfully installed."
-        else
-            print_color "$RED" "Problem during $tool installation."
-            read -rp "If this is an error, you can continue normally. Continue with script execution? [y/N]: " continue_installation
-            if [[ ! $continue_installation =~ ^[Yy]$ ]]; then
-                remove_and_terminate
-            fi
-        fi
-    fi
-done
 
 
 # Create python virtual environment ---------------------------------------------
@@ -268,22 +275,7 @@ echo " "
 # Adding Crontab entries ------------------------------------------------------------
 print_color "$YELLOW" "Adding Crontab entries..."
 
-#(crontab -l ; echo "# Run startup configuration on reboot") | crontab -
-#(crontab -l ; echo "@reboot $network_script") | crontab -
-
-#(crontab -l ; echo "# Execute pool.exhaustion.py on reboot with 60 seconds of delay and once every hour") | crontab -
-#(crontab -l 2>/dev/null; echo "@reboot sleep 60 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py") | crontab -
-#(crontab -l 2>/dev/null; echo "0 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/pool.exhaustion.py") | crontab -
-
-#(crontab -l ; echo "# Execute dhcp.spoof.py on reboot with 180 seconds of delay and once every 10 minutes") | crontab -
-#(crontab -l 2>/dev/null; echo "@reboot sleep 180 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py") | crontab -
-#(crontab -l 2>/dev/null; echo "*/10 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/dhcp.spoof.py") | crontab -
-
-#(crontab -l ; echo "# Execute ip.lease.renewal.py on reboot with 180 seconds of delay and once every minute") | crontab -
-#(crontab -l 2>/dev/null; echo "@reboot sleep 270 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py") | crontab -
-#(crontab -l 2>/dev/null; echo "*/1 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py") | crontab -
-
-add_crontab_entry "# Run startup configuration on reboot"
+add_crontab_entry "# Run DHCP Starver startup configuration on reboot"
 add_crontab_entry "@reboot sleep 30 && $startup_script"
 
 add_crontab_entry "# Execute pool.exhaustion.py on reboot with 60 seconds of delay and once every hour"
@@ -298,9 +290,9 @@ add_crontab_entry "# Execute ip.lease.renewal.py on reboot with 180 seconds of d
 add_crontab_entry "@reboot sleep 270 && $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py"
 add_crontab_entry "*/1 * * * * $DHCP_STARVER_DIR/python_venv/bin/python $DHCP_STARVER_DIR/ip.lease.renewal.py"
 
-
 print_color $GREEN "Crontab entries added. Displaying current existing entries:"
 crontab -l
 
 echo " "
 print_color $BLUE "DHCP Starver tool successfully installed. Please remove install.sh. A system reboot is recommended."
+print_color $BLUE "If you want to uninstall the tool, please remove $DHCP_STARVER_DIR and associated entrien in Crontab."
