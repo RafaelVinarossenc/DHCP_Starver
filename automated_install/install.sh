@@ -142,7 +142,7 @@ deactivate
 print_color "$GREEN" "Libraries successfully installed in the virtual environment."
 
 
-# Configure device interfaces ---------------------------------------------------
+# Device interfaces configuration ---------------------------------------------------
 print_color "$YELLOW" "Available network interfaces:"
 interfaces=($(ls /sys/class/net))
 
@@ -216,7 +216,7 @@ else
     fi
 fi
 
-# Configuring Pi-Hole
+# Pi-Hole configuration
 # Prompt to reset administrator password
 print_color "$YELLOW" "Changing pi-Hole administrator password used to access Web interface..."
 pihole -a -p

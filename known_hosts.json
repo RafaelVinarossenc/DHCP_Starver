@@ -1,1 +1,12 @@
-{}
+{
+    "98:54:1b:c6:05:e8": {
+        "actual_ip_address": "192.168.255.124",
+        "mac_address": "98:54:1b:c6:05:e8",
+        "hostname": "DESKTOP-RIPBP9I"
+    },
+    "9e:94:11:8d:29:a9": {
+        "actual_ip_address": "192.168.255.174",
+        "mac_address": "9e:94:11:8d:29:a9",
+        "hostname": "Nokia-Ladrillo"
+    }
+}

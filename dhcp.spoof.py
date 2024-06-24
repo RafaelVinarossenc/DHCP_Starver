@@ -1,7 +1,5 @@
 # dhcp.spoof.py
 # Performs a targeted ARP Request scan to find existing hosts connected to network and "steal" their IP addresses
-# 1. 
-# 2. 
 
 
 #### IMPORTS #### -------------------------------------------------------------------
