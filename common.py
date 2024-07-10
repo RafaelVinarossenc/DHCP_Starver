@@ -222,7 +222,7 @@ def mac_to_str(bytes_value):
 
 def create_broadcast_dhcp_request_packet(host, server_id):
     """
-    Creates a broadcast DHCP Discover with host's parameters
+    Creates a broadcast DHCP Request packet with host's parameters
     """
     trans_id = host.transaction_id
     # Converting MAC address from typical format to a 16 bytes sequence, needed for BOOTP/DHCP header 
